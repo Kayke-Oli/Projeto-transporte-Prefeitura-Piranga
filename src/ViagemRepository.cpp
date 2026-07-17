@@ -14,24 +14,24 @@ void ViagemRepository::cadastrarViagem(const Viagem &viagem)
         pqxx::result res = transacao.exec_params(
             "INSERT INTO Viagens (data_viagem, cidade_destino, id_carro, id_motorista) "
             "VALUES ($1, $2, $3, $4) RETURNING id_viagem",
-            viagem.data, viagem.cidade_destino, viagem.carroUtilizado.id, viagem.motoristaResponsavel.id);
+            viagem.dataViagem, viagem.cidadeDestino, viagem.veiculoId, viagem.motoristaId);
 
         int id_viagem = res[0][0].as<int>();
 
         // Insere os pacientes e acompanhantes na tabela associativa
-        for (const auto &pv : viagem.listaPassageiros)
+        for (const auto &pv : viagem.passageiros)
         {
-            if (pv.acompanhante.has_value())
+            if (pv.acompanhanteId.has_value())
             {
                 transacao.exec_params(
                     "INSERT INTO Viagem_Pacientes (id_viagem, id_paciente, id_acompanhante) VALUES ($1, $2, $3)",
-                    id_viagem, pv.paciente.id, pv.acompanhante.value().id);
+                    id_viagem, pv.pacienteId, pv.acompanhanteId.value());
             }
             else
             {
                 transacao.exec_params(
                     "INSERT INTO Viagem_Pacientes (id_viagem, id_paciente, id_acompanhante) VALUES ($1, $2, NULL)",
-                    id_viagem, pv.paciente.id);
+                    id_viagem, pv.pacienteId);
             }
         }
 

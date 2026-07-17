@@ -14,20 +14,25 @@ private:
 public:
     PacienteRepository(Database &database) : db(database) {}
 
-    void cadastrar(const Paciente &paciente)
+    // Retorna o ID gerado (>0) em caso de sucesso, ou std::nullopt em caso de erro.
+    std::optional<int> cadastrar(const Paciente &paciente)
     {
         try
         {
             pqxx::work transacao(*db.getConexao());
-            transacao.exec_params(
-                "INSERT INTO Pacientes (cpf, nome, telefone, endereco) VALUES ($1, $2, $3, $4)",
-                paciente.cpf, paciente.nome, paciente.telefone, paciente.endereco);
+            pqxx::result res = transacao.exec_params(
+                "INSERT INTO Pacientes (cpf, nome, telefone, endereco) VALUES ($1, $2, $3, $4) "
+                "RETURNING id_paciente",
+                paciente.cpf, paciente.nomeCompleto, paciente.telefone, paciente.endereco);
             transacao.commit();
-            std::cout << "Paciente cadastrado com sucesso!" << std::endl;
+            int id = res[0][0].as<int>();
+            std::cout << "Paciente cadastrado com sucesso! ID: " << id << std::endl;
+            return id;
         }
         catch (const std::exception &e)
         {
             std::cerr << "Erro ao cadastrar paciente: " << e.what() << std::endl;
+            return std::nullopt;
         }
     }
 
@@ -43,7 +48,7 @@ public:
                 Paciente p;
                 p.id = res[0]["id_paciente"].as<int>();
                 p.cpf = res[0]["cpf"].c_str();
-                p.nome = res[0]["nome"].c_str();
+                p.nomeCompleto = res[0]["nome"].c_str();
                 p.telefone = res[0]["telefone"].c_str();
                 p.endereco = res[0]["endereco"].c_str();
                 return p;

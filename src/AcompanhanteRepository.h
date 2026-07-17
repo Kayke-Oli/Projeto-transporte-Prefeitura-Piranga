@@ -2,6 +2,7 @@
 #include "Entidades.h"
 #include "Database.h"
 #include <pqxx/pqxx>
+#include <optional>
 #include <iostream>
 
 class AcompanhanteRepository
@@ -12,22 +13,25 @@ private:
 public:
     AcompanhanteRepository(Database &database) : db(database) {}
 
-    void cadastrar(const Acompanhante &acompanhante)
+    // Retorna o ID gerado (>0) em caso de sucesso, ou std::nullopt em caso de erro.
+    std::optional<int> cadastrar(const Acompanhante &acompanhante)
     {
         try
         {
             pqxx::work transacao(*db.getConexao());
-            transacao.exec_params(
-                "INSERT INTO Acompanhantes (cpf, nome, telefone) VALUES ($1, $2, $3)",
-                acompanhante.cpf, acompanhante.nome, acompanhante.telefone);
+            pqxx::result res = transacao.exec_params(
+                "INSERT INTO Acompanhantes (cpf, nome, telefone) VALUES ($1, $2, $3) "
+                "RETURNING id_acompanhante",
+                acompanhante.cpf, acompanhante.nomeCompleto, acompanhante.telefone);
             transacao.commit();
-            std::cout << "Acompanhante cadastrado com sucesso!" << std::endl;
+            int id = res[0][0].as<int>();
+            std::cout << "Acompanhante cadastrado com sucesso! ID: " << id << std::endl;
+            return id;
         }
         catch (const std::exception &e)
         {
             std::cerr << "Erro ao cadastrar acompanhante: " << e.what() << std::endl;
+            return std::nullopt;
         }
     }
 };
-
-#endif

@@ -24,5 +24,3 @@ public:
     int gerarRelatorioVolumePassageiros(const std::string &dataInicio, const std::string &dataFim);
     void gerarMapaViagemDiario(const std::string &dataViagem);
 };
-
-#endif
