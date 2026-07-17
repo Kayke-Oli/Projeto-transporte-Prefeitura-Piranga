@@ -3,8 +3,8 @@
         {
             "name": "MinGW64",
             "includePath": [
-                "${workspaceFolder}/src/**",
-                "${workspaceFolder}/external/sqlite"
+                "${workspaceFolder}/**",
+                "C:/msys64/mingw64/include/**"
             ],
             "defines": [],
             "compilerPath": "C:/mingw64/bin/g++.exe",

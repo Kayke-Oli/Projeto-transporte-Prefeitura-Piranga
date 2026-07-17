@@ -1,4 +1,3 @@
-// Entidades.hpp
 #pragma once
 #include <string>
 #include <optional>

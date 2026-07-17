@@ -1,30 +1,31 @@
-// VeiculoRepository.h / MotoristaRepository.h / AcompanhanteRepository.h
-// (seguem o mesmo padrão CRUD simples)
 #pragma once
-#include "Database.h"
 #include "Entidades.h"
-#include <vector>
-#include <stdexcept>
+#include "Database.h"
+#include <pqxx/pqxx>
+#include <iostream>
 
 class VeiculoRepository
 {
-public:
-    explicit VeiculoRepository(Database &db) : db_(db) {}
-    int cadastrar(const Veiculo &v); // valida placa única
-    std::optional<Veiculo> buscarPorId(int id);
-    std::vector<Veiculo> listarTodos();
-
 private:
-    Database &db_;
-};
+    Database &db;
 
-class AcompanhanteRepository
-{
 public:
-    explicit AcompanhanteRepository(Database &db) : db_(db) {}
-    int cadastrar(const Acompanhante &a); // valida CPF único
-    std::optional<Acompanhante> buscarPorCpf(const std::string &cpf);
+    VeiculoRepository(Database &database) : db(database) {}
 
-private:
-    Database &db_;
+    void cadastrar(const Carro &carro)
+    {
+        try
+        {
+            pqxx::work transacao(*db.getConexao());
+            transacao.exec_params(
+                "INSERT INTO Carros (placa, modelo) VALUES ($1, $2)",
+                carro.placa, carro.modelo);
+            transacao.commit();
+            std::cout << "Veículo cadastrado com sucesso!" << std::endl;
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Erro ao cadastrar carro: " << e.what() << std::endl;
+        }
+    }
 };
