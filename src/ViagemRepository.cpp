@@ -1,4 +1,5 @@
 #include "ViagemRepository.h"
+#include "DataUtils.h"
 #include <pqxx/pqxx>
 #include <iostream>
 
@@ -10,11 +11,16 @@ void ViagemRepository::cadastrarViagem(const Viagem &viagem)
     {
         pqxx::work transacao(*db.getConexao());
 
+        // A coluna data_viagem agora é DATE; convertemos de "DD-MM-YYYY"
+        // (formato do domínio, ver Entidades.h) para "YYYY-MM-DD" (ISO,
+        // exigido pelo PostgreSQL) na borda com o banco.
+        std::string dataViagemISO = DataUtils::paraISO(viagem.dataViagem);
+
         // Insere a viagem e retorna o ID gerado para ser usado na tabela N:N
         pqxx::result res = transacao.exec_params(
             "INSERT INTO Viagens (data_viagem, cidade_destino, id_carro, id_motorista) "
             "VALUES ($1, $2, $3, $4) RETURNING id_viagem",
-            viagem.dataViagem, viagem.cidadeDestino, viagem.veiculoId, viagem.motoristaId);
+            dataViagemISO, viagem.cidadeDestino, viagem.veiculoId, viagem.motoristaId);
 
         int id_viagem = res[0][0].as<int>();
 
@@ -68,7 +74,7 @@ void ViagemRepository::gerarRelatorioHistoricoPaciente(const std::string &cpfPac
         std::cout << "\n--- Histórico de Viagens do Paciente (CPF: " << cpfPaciente << ") ---\n";
         for (auto row : res)
         {
-            std::cout << "Data: " << row["data_viagem"].c_str()
+            std::cout << "Data: " << DataUtils::paraBR(row["data_viagem"].c_str())
                       << " | Destino: " << row["cidade_destino"].c_str()
                       << " | Motorista: " << row["motorista"].c_str()
                       << " | Carro: " << row["veiculo_modelo"].c_str() << " (" << row["veiculo_placa"].c_str() << ")";
@@ -97,13 +103,18 @@ int ViagemRepository::gerarRelatorioVolumePassageiros(const std::string &dataIni
     {
         pqxx::work transacao(*db.getConexao());
 
+        // dataInicio/dataFim chegam em "DD-MM-YYYY"; convertemos para ISO
+        // para comparar corretamente contra a coluna DATE no BETWEEN.
+        std::string dataInicioISO = DataUtils::paraISO(dataInicio);
+        std::string dataFimISO = DataUtils::paraISO(dataFim);
+
         std::string sql =
             "SELECT "
             "(SELECT COUNT(*) FROM Viagem_Pacientes vp JOIN Viagens v ON vp.id_viagem = v.id_viagem WHERE v.data_viagem BETWEEN $1 AND $2) + "
             "(SELECT COUNT(id_acompanhante) FROM Viagem_Pacientes vp JOIN Viagens v ON vp.id_viagem = v.id_viagem WHERE v.data_viagem BETWEEN $1 AND $2) "
             "AS total_pessoas";
 
-        pqxx::result res = transacao.exec_params(sql, dataInicio, dataFim);
+        pqxx::result res = transacao.exec_params(sql, dataInicioISO, dataFimISO);
 
         int total = res[0]["total_pessoas"].as<int>();
         std::cout << "Total de passageiros transportados entre " << dataInicio << " e " << dataFim << ": " << total << std::endl;
@@ -122,6 +133,10 @@ void ViagemRepository::gerarMapaViagemDiario(const std::string &dataViagem)
     {
         pqxx::work transacao(*db.getConexao());
 
+        // dataViagem chega em "DD-MM-YYYY"; convertemos para ISO para
+        // comparar corretamente contra a coluna DATE.
+        std::string dataViagemISO = DataUtils::paraISO(dataViagem);
+
         std::string sql =
             "SELECT v.id_viagem, c.placa, c.modelo, m.nome AS motorista, v.cidade_destino, "
             "p.nome AS paciente, a.nome AS acompanhante "
@@ -134,7 +149,7 @@ void ViagemRepository::gerarMapaViagemDiario(const std::string &dataViagem)
             "WHERE v.data_viagem = $1 "
             "ORDER BY v.id_viagem";
 
-        pqxx::result res = transacao.exec_params(sql, dataViagem);
+        pqxx::result res = transacao.exec_params(sql, dataViagemISO);
 
         std::cout << "\n--- Mapa de Viagens Diário (" << dataViagem << ") ---\n";
         int current_viagem = -1;
