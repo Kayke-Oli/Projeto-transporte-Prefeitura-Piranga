@@ -95,9 +95,14 @@ public:
 
     void desconectar()
     {
-        if (conn && conn->is_open())
+        // Em versões recentes da libpqxx (7.x), pqxx::connection não tem
+        // mais o método disconnect(). O jeito correto de fechar a conexão
+        // é simplesmente destruir o objeto — o unique_ptr faz isso por nós
+        // (RAII) ao chamarmos reset(), que libera o ponteiro atual antes
+        // de assumir nullptr.
+        if (conn)
         {
-            conn->disconnect();
+            conn.reset();
         }
     }
 
