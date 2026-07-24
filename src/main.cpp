@@ -5,6 +5,8 @@
 #include "MotoristaRepository.h"
 #include "VeiculoRepository.h"
 #include "ViagemRepository.h"
+#include "CpfUtils.h"
+
 #include <iostream>
 #include <string>
 #include <limits>
@@ -62,6 +64,23 @@ bool perguntarSimNao(const std::string &prompt)
     return !resposta.empty() && (resposta[0] == 's' || resposta[0] == 'S');
 }
 
+// Insiste até receber um CPF matematicamente válido (11 dígitos, sem
+// pontuação). Assim, um CPF inválido nunca chega perto do repository/banco -
+// a validação acontece na entrada, o mais cedo possível.
+std::string lerCPF(const std::string &prompt)
+{
+    while (true)
+    {
+        std::string cpf = lerLinha(prompt);
+        if (CpfUtils::verificar(cpf))
+        {
+            return cpf;
+        }
+        std::cout << "CPF inválido. Digite os 11 dígitos, sem pontos ou traço "
+                     "(ex.: 11144477735).\n";
+    }
+}
+
 // =====================================================================
 // Fluxos de cadastro
 // =====================================================================
@@ -70,7 +89,7 @@ void cadastrarPacienteFluxo(PacienteRepository &repo)
 {
     std::cout << "\n-- Cadastro de Paciente --\n";
     Paciente p;
-    p.cpf = lerLinha("CPF (somente números): ");
+    p.cpf = lerCPF("CPF (somente números): ");
     p.nomeCompleto = lerLinha("Nome completo: ");
     p.telefone = lerLinha("Telefone: ");
     p.endereco = lerLinha("Endereço: ");
@@ -80,7 +99,7 @@ void cadastrarPacienteFluxo(PacienteRepository &repo)
 void buscarPacientePorCPFFluxo(PacienteRepository &repo)
 {
     std::cout << "\n-- Buscar Paciente por CPF --\n";
-    std::string cpf = lerLinha("CPF: ");
+    std::string cpf = lerCPF("CPF: ");
     auto paciente = repo.buscarPorCPF(cpf);
 
     if (paciente.has_value())
@@ -100,7 +119,7 @@ void cadastrarAcompanhanteFluxo(AcompanhanteRepository &repo)
 {
     std::cout << "\n-- Cadastro de Acompanhante --\n";
     Acompanhante a;
-    a.cpf = lerLinha("CPF (somente números): ");
+    a.cpf = lerCPF("CPF (somente números): ");
     a.nomeCompleto = lerLinha("Nome completo: ");
     a.telefone = lerLinha("Telefone: ");
     repo.cadastrar(a);
@@ -111,7 +130,7 @@ void cadastrarMotoristaFluxo(MotoristaRepository &repo)
     std::cout << "\n-- Cadastro de Motorista --\n";
     Motorista m;
     m.nome = lerLinha("Nome completo: ");
-    m.cpf = lerLinha("CPF (somente números): ");
+    m.cpf = lerCPF("CPF (somente números): ");
     repo.cadastrar(m);
 }
 
@@ -157,7 +176,7 @@ void cadastrarViagemFluxo(ViagemRepository &repo)
 void relatorioHistoricoFluxo(ViagemRepository &repo)
 {
     std::cout << "\n-- Relatório: Histórico de Viagens do Paciente --\n";
-    std::string cpf = lerLinha("CPF do paciente: ");
+    std::string cpf = lerCPF("CPF do paciente: ");
     repo.gerarRelatorioHistoricoPaciente(cpf);
 }
 

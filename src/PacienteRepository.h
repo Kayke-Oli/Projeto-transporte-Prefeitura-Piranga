@@ -14,6 +14,50 @@ private:
 public:
     PacienteRepository(Database &database) : db(database) {}
 
+    bool VerificarCPF(string &cpf)
+    {
+        int soma = 0;
+        int verificador = 10;
+        int resto;
+        for (int i = 0; i < cpf.length() - 2; i++)
+        {
+            soma += (int)cpf[i] * verificador;
+            verificador--;
+        }
+        resto = soma % 11;
+        if (resto == 0 || resto == 1)
+        {
+            if (cpf[9] != 0)
+                return false;
+        }
+        else
+        {
+            resto = 11 - resto;
+            if (cpf[9] != resto)
+                return false;
+        }
+        verificador = 10;
+        soma = 0;
+        for (int i = 1; i < cpf.length() - 1; i++)
+        {
+            soma += cpf[i] * verificador;
+            verificador--;
+        }
+        resto = soma % 11;
+        if (resto == 0 || resto == 1)
+        {
+            if (cpf[10] != 0)
+                return false;
+        }
+        else
+        {
+            resto = 11 - resto;
+            if (cpf[10] != resto)
+                return false;
+        }
+        return true;
+    }
+
     // Retorna o ID gerado (>0) em caso de sucesso, ou std::nullopt em caso de erro.
     std::optional<int> cadastrar(const Paciente &paciente)
     {
