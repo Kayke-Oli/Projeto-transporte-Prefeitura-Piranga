@@ -18,6 +18,7 @@ public:
     {
         try
         {
+            db.exigirConexao();
             pqxx::work transacao(*db.getConexao());
             pqxx::result res = transacao.exec_params(
                 "INSERT INTO Motoristas (nome, cpf) VALUES ($1, $2) RETURNING id_motorista",

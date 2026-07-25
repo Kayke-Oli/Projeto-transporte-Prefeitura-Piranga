@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <stdexcept>
 
 class Database
 {
@@ -75,13 +76,29 @@ public:
     // Garante que a conexão está ativa antes de usar; tenta reconectar se necessário.
     // Importante em ambiente multi-máquina, onde quedas de rede são mais prováveis
     // do que em uso puramente local.
+    //
+    // is_open() sozinho NÃO é suficiente: ele só reflete o estado local do
+    // socket, não sabe que o servidor do outro lado caiu até a conexão ser
+    // efetivamente usada. Por isso, além de is_open(), fazemos um ping ativo
+    // (uma query trivial) para confirmar que a conexão realmente responde
+    // antes de reaproveitá-la.
     bool garantirConectado()
     {
         try
         {
             if (conn && conn->is_open())
             {
-                return true;
+                try
+                {
+                    pqxx::nontransaction ping(*conn);
+                    ping.exec("SELECT 1");
+                    return true; // conexão confirmada viva
+                }
+                catch (const std::exception &)
+                {
+                    // is_open() dizia que sim, mas a conexão está morta de
+                    // verdade (ex.: servidor caiu). Cai para reconectar abaixo.
+                }
             }
             conn = std::make_unique<pqxx::connection>(connection_string);
             return conn->is_open();
@@ -90,6 +107,23 @@ public:
         {
             std::cerr << "Erro ao (re)conectar: " << e.what() << std::endl;
             return false;
+        }
+    }
+
+    // Garante que a conexão está pronta para uso; tenta reconectar se
+    // necessário (via garantirConectado()) e lança uma exceção clara se
+    // não conseguir. Pensado para ser chamado como a primeira linha de
+    // cada método de repository, dentro do try, antes de abrir uma
+    // transação — assim, o mesmo catch que já existe em cada método
+    // também cobre falhas de (re)conexão, sem precisar de tratamento
+    // especial em cada lugar.
+    void exigirConexao()
+    {
+        if (!garantirConectado())
+        {
+            throw std::runtime_error(
+                "Não foi possível conectar ao banco de dados (conexão perdida "
+                "e tentativa de reconexão falhou).");
         }
     }
 

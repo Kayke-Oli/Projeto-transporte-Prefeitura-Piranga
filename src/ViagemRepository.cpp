@@ -9,6 +9,7 @@ void ViagemRepository::cadastrarViagem(const Viagem &viagem)
 {
     try
     {
+        db.exigirConexao();
         pqxx::work transacao(*db.getConexao());
 
         // A coluna data_viagem agora é DATE; convertemos de "DD-MM-YYYY"
@@ -50,10 +51,13 @@ void ViagemRepository::cadastrarViagem(const Viagem &viagem)
     }
 }
 
-void ViagemRepository::gerarRelatorioHistoricoPaciente(const std::string &cpfPaciente)
+std::vector<HistoricoPacienteItem> ViagemRepository::gerarRelatorioHistoricoPaciente(const std::string &cpfPaciente)
 {
+    std::vector<HistoricoPacienteItem> resultado;
+
     try
     {
+        db.exigirConexao();
         pqxx::work transacao(*db.getConexao());
 
         std::string sql =
@@ -71,36 +75,38 @@ void ViagemRepository::gerarRelatorioHistoricoPaciente(const std::string &cpfPac
 
         pqxx::result res = transacao.exec_params(sql, cpfPaciente);
 
-        std::cout << "\n--- Histórico de Viagens do Paciente (CPF: " << cpfPaciente << ") ---\n";
         for (auto row : res)
         {
-            std::cout << "Data: " << DataUtils::paraBR(row["data_viagem"].c_str())
-                      << " | Destino: " << row["cidade_destino"].c_str()
-                      << " | Motorista: " << row["motorista"].c_str()
-                      << " | Carro: " << row["veiculo_modelo"].c_str() << " (" << row["veiculo_placa"].c_str() << ")";
+            HistoricoPacienteItem item;
+            item.dataViagem = DataUtils::paraBR(row["data_viagem"].c_str());
+            item.cidadeDestino = row["cidade_destino"].c_str();
+            item.motorista = row["motorista"].c_str();
+            item.veiculoModelo = row["veiculo_modelo"].c_str();
+            item.veiculoPlaca = row["veiculo_placa"].c_str();
 
             if (!row["acompanhante"].is_null())
             {
-                std::cout << " | Acompanhante: " << row["acompanhante"].c_str();
+                item.acompanhante = std::string(row["acompanhante"].c_str());
             }
-            else
-            {
-                std::cout << " | Acompanhante: Nenhum";
-            }
-            std::cout << "\n";
+
+            resultado.push_back(item);
         }
-        std::cout << "--------------------------------------------------\n";
     }
     catch (const std::exception &e)
     {
         std::cerr << "Erro ao gerar histórico: " << e.what() << std::endl;
     }
+
+    return resultado;
 }
 
-int ViagemRepository::gerarRelatorioVolumePassageiros(const std::string &dataInicio, const std::string &dataFim)
+VolumePassageirosResultado ViagemRepository::gerarRelatorioVolumePassageiros(const std::string &dataInicio, const std::string &dataFim)
 {
+    VolumePassageirosResultado resultado;
+
     try
     {
+        db.exigirConexao();
         pqxx::work transacao(*db.getConexao());
 
         // dataInicio/dataFim chegam em "DD-MM-YYYY"; convertemos para ISO
@@ -110,27 +116,30 @@ int ViagemRepository::gerarRelatorioVolumePassageiros(const std::string &dataIni
 
         std::string sql =
             "SELECT "
-            "(SELECT COUNT(*) FROM Viagem_Pacientes vp JOIN Viagens v ON vp.id_viagem = v.id_viagem WHERE v.data_viagem BETWEEN $1 AND $2) + "
-            "(SELECT COUNT(id_acompanhante) FROM Viagem_Pacientes vp JOIN Viagens v ON vp.id_viagem = v.id_viagem WHERE v.data_viagem BETWEEN $1 AND $2) "
-            "AS total_pessoas";
+            "(SELECT COUNT(*) FROM Viagem_Pacientes vp JOIN Viagens v ON vp.id_viagem = v.id_viagem WHERE v.data_viagem BETWEEN $1 AND $2) AS total_pacientes, "
+            "(SELECT COUNT(id_acompanhante) FROM Viagem_Pacientes vp JOIN Viagens v ON vp.id_viagem = v.id_viagem WHERE v.data_viagem BETWEEN $1 AND $2) AS total_acompanhantes";
 
         pqxx::result res = transacao.exec_params(sql, dataInicioISO, dataFimISO);
 
-        int total = res[0]["total_pessoas"].as<int>();
-        std::cout << "Total de passageiros transportados entre " << dataInicio << " e " << dataFim << ": " << total << std::endl;
-        return total;
+        resultado.totalPacientes = res[0]["total_pacientes"].as<int>();
+        resultado.totalAcompanhantes = res[0]["total_acompanhantes"].as<int>();
+        resultado.totalPessoas = resultado.totalPacientes + resultado.totalAcompanhantes;
     }
     catch (const std::exception &e)
     {
         std::cerr << "Erro ao calcular volume de passageiros: " << e.what() << std::endl;
-        return 0;
     }
+
+    return resultado;
 }
 
-void ViagemRepository::gerarMapaViagemDiario(const std::string &dataViagem)
+std::vector<MapaViagemItem> ViagemRepository::gerarMapaViagemDiario(const std::string &dataViagem)
 {
+    std::vector<MapaViagemItem> resultado;
+
     try
     {
+        db.exigirConexao();
         pqxx::work transacao(*db.getConexao());
 
         // dataViagem chega em "DD-MM-YYYY"; convertemos para ISO para
@@ -139,7 +148,7 @@ void ViagemRepository::gerarMapaViagemDiario(const std::string &dataViagem)
 
         std::string sql =
             "SELECT v.id_viagem, c.placa, c.modelo, m.nome AS motorista, v.cidade_destino, "
-            "p.nome AS paciente, a.nome AS acompanhante "
+            "p.nome AS paciente, p.telefone AS paciente_telefone, a.nome AS acompanhante "
             "FROM Viagens v "
             "JOIN Carros c ON v.id_carro = c.id_carro "
             "JOIN Motoristas m ON v.id_motorista = m.id_motorista "
@@ -151,32 +160,47 @@ void ViagemRepository::gerarMapaViagemDiario(const std::string &dataViagem)
 
         pqxx::result res = transacao.exec_params(sql, dataViagemISO);
 
-        std::cout << "\n--- Mapa de Viagens Diário (" << dataViagem << ") ---\n";
-        int current_viagem = -1;
+        int idViagemAtual = -1;
 
         for (auto row : res)
         {
-            int id_viagem = row["id_viagem"].as<int>();
+            int idViagem = row["id_viagem"].as<int>();
 
-            if (id_viagem != current_viagem)
+            // Nova viagem encontrada no resultado -> cria um novo item no
+            // vetor. Usamos resultado.back() (em vez de guardar um ponteiro
+            // pro item) para não sofrer com o vector realocando memória e
+            // invalidando um ponteiro anterior a cada push_back().
+            if (idViagem != idViagemAtual)
             {
-                std::cout << "\n[Viagem ID: " << id_viagem << " | Destino: " << row["cidade_destino"].c_str() << "]\n";
-                std::cout << "Veículo: " << row["modelo"].c_str() << " (" << row["placa"].c_str() << ") | Motorista: " << row["motorista"].c_str() << "\n";
-                std::cout << "Passageiros:\n";
-                current_viagem = id_viagem;
+                MapaViagemItem item;
+                item.viagemId = idViagem;
+                item.veiculoPlaca = row["placa"].c_str();
+                item.veiculoModelo = row["modelo"].c_str();
+                item.motorista = row["motorista"].c_str();
+                item.cidadeDestino = row["cidade_destino"].c_str();
+                resultado.push_back(item);
+                idViagemAtual = idViagem;
             }
 
-            std::cout << "  - Paciente: " << row["paciente"].c_str();
+            MapaViagemPassageiro passageiro;
+            passageiro.pacienteNome = row["paciente"].c_str();
+
+            if (!row["paciente_telefone"].is_null())
+            {
+                passageiro.pacienteTelefone = std::string(row["paciente_telefone"].c_str());
+            }
             if (!row["acompanhante"].is_null())
             {
-                std::cout << " (Acompanhante: " << row["acompanhante"].c_str() << ")";
+                passageiro.acompanhanteNome = std::string(row["acompanhante"].c_str());
             }
-            std::cout << "\n";
+
+            resultado.back().passageiros.push_back(passageiro);
         }
-        std::cout << "--------------------------------------------------\n";
     }
     catch (const std::exception &e)
     {
         std::cerr << "Erro ao gerar mapa de viagem diário: " << e.what() << std::endl;
     }
+
+    return resultado;
 }
