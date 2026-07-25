@@ -177,7 +177,26 @@ void relatorioHistoricoFluxo(ViagemRepository &repo)
 {
     std::cout << "\n-- Relatório: Histórico de Viagens do Paciente --\n";
     std::string cpf = lerCPF("CPF do paciente: ");
-    repo.gerarRelatorioHistoricoPaciente(cpf);
+
+    std::vector<HistoricoPacienteItem> historico = repo.gerarRelatorioHistoricoPaciente(cpf);
+
+    if (historico.empty())
+    {
+        std::cout << "Nenhuma viagem encontrada para esse paciente.\n";
+        return;
+    }
+
+    std::cout << "\n--- Histórico de Viagens (CPF: " << cpf << ") ---\n";
+    for (const auto &item : historico)
+    {
+        std::cout << "Data: " << item.dataViagem
+                  << " | Destino: " << item.cidadeDestino
+                  << " | Motorista: " << item.motorista
+                  << " | Carro: " << item.veiculoModelo << " (" << item.veiculoPlaca << ")"
+                  << " | Acompanhante: " << (item.acompanhante.has_value() ? *item.acompanhante : "Nenhum")
+                  << "\n";
+    }
+    std::cout << "--------------------------------------------------\n";
 }
 
 void relatorioVolumeFluxo(ViagemRepository &repo)
@@ -185,14 +204,51 @@ void relatorioVolumeFluxo(ViagemRepository &repo)
     std::cout << "\n-- Relatório: Volume de Passageiros por Período --\n";
     std::string dataInicio = lerLinha("Data inicial (DD-MM-YYYY): ");
     std::string dataFim = lerLinha("Data final (DD-MM-YYYY): ");
-    repo.gerarRelatorioVolumePassageiros(dataInicio, dataFim);
+
+    VolumePassageirosResultado resultado = repo.gerarRelatorioVolumePassageiros(dataInicio, dataFim);
+
+    std::cout << "\nPeríodo: " << dataInicio << " a " << dataFim << "\n";
+    std::cout << "Pacientes transportados: " << resultado.totalPacientes << "\n";
+    std::cout << "Acompanhantes transportados: " << resultado.totalAcompanhantes << "\n";
+    std::cout << "Total de pessoas: " << resultado.totalPessoas << "\n";
 }
 
 void mapaDiarioFluxo(ViagemRepository &repo)
 {
     std::cout << "\n-- Relatório: Mapa de Viagens do Dia --\n";
     std::string data = lerLinha("Data (DD-MM-YYYY): ");
-    repo.gerarMapaViagemDiario(data);
+
+    std::vector<MapaViagemItem> mapa = repo.gerarMapaViagemDiario(data);
+
+    if (mapa.empty())
+    {
+        std::cout << "Nenhuma viagem registrada nessa data.\n";
+        return;
+    }
+
+    std::cout << "\n--- Mapa de Viagens Diário (" << data << ") ---\n";
+    for (const auto &viagem : mapa)
+    {
+        std::cout << "\n[Viagem ID: " << viagem.viagemId << " | Destino: " << viagem.cidadeDestino << "]\n";
+        std::cout << "Veículo: " << viagem.veiculoModelo << " (" << viagem.veiculoPlaca
+                  << ") | Motorista: " << viagem.motorista << "\n";
+        std::cout << "Passageiros:\n";
+
+        for (const auto &passageiro : viagem.passageiros)
+        {
+            std::cout << "  - Paciente: " << passageiro.pacienteNome;
+            if (passageiro.pacienteTelefone.has_value())
+            {
+                std::cout << " (Tel: " << *passageiro.pacienteTelefone << ")";
+            }
+            if (passageiro.acompanhanteNome.has_value())
+            {
+                std::cout << " (Acompanhante: " << *passageiro.acompanhanteNome << ")";
+            }
+            std::cout << "\n";
+        }
+    }
+    std::cout << "--------------------------------------------------\n";
 }
 
 // =====================================================================
