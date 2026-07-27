@@ -11,6 +11,7 @@
 #include <string>
 #include <limits>
 #include <cstdlib>
+#include <memory>
 
 // =====================================================================
 // Funções auxiliares de entrada de dados
@@ -276,26 +277,43 @@ void exibirMenu()
 
 int main()
 {
-    Database db;
-    db.conectar();
+    // Database::Database() agora pode lançar std::runtime_error se a
+    // variável de ambiente DB_SSLMODE estiver configurada com um modo que
+    // não garante conexão criptografada (ver Database.h). Sem este
+    // try/catch, essa exceção subiria sem tratamento e o programa
+    // encerraria com uma mensagem genérica do C++ (terminate called...)
+    // em vez de uma explicação clara do que corrigir.
+    std::unique_ptr<Database> db;
+    try
+    {
+        db = std::make_unique<Database>();
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Erro de configuração: " << e.what() << std::endl;
+        return 1;
+    }
+
+    db->conectar();
 
     // Garante que a conexão está realmente utilizável antes de abrir o
     // menu. Sem essa checagem, qualquer operação abaixo desreferenciaria
     // um ponteiro nulo (getConexao() retornando nullptr) caso a conexão
     // inicial tenha falhado, causando um crash em vez de uma mensagem clara.
-    if (!db.garantirConectado())
+    if (!db->garantirConectado())
     {
         std::cerr << "Não foi possível estabelecer conexão com o banco de dados. "
                      "Verifique as variáveis de ambiente (DB_HOST, DB_PORT, DB_NAME, "
-                     "DB_USER, DB_PASSWORD) e se o servidor PostgreSQL está acessível.\n";
+                     "DB_USER, DB_PASSWORD, DB_SSLMODE) e se o servidor PostgreSQL "
+                     "está acessível e aceitando conexões SSL.\n";
         return 1;
     }
 
-    PacienteRepository pacienteRepo(db);
-    AcompanhanteRepository acompanhanteRepo(db);
-    MotoristaRepository motoristaRepo(db);
-    VeiculoRepository veiculoRepo(db);
-    ViagemRepository viagemRepo(db);
+    PacienteRepository pacienteRepo(*db);
+    AcompanhanteRepository acompanhanteRepo(*db);
+    MotoristaRepository motoristaRepo(*db);
+    VeiculoRepository veiculoRepo(*db);
+    ViagemRepository viagemRepo(*db);
 
     int opcao = -1;
     do
@@ -341,6 +359,6 @@ int main()
         }
     } while (opcao != 0);
 
-    db.desconectar();
+    db->desconectar();
     return 0;
 }

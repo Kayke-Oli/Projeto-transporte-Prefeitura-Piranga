@@ -5,6 +5,7 @@
 #include <string>
 #include <cstdlib>
 #include <stdexcept>
+#include <set>
 
 class Database
 {
@@ -12,10 +13,36 @@ private:
     std::unique_ptr<pqxx::connection> conn;
     std::string connection_string;
 
+    // Modos de sslmode do libpq, do mais fraco pro mais forte:
+    //   disable     -> nunca usa SSL (texto puro)
+    //   allow       -> tenta sem SSL primeiro, só usa SSL se o servidor exigir
+    //   prefer      -> tenta COM SSL primeiro, mas aceita sem SSL se o
+    //                  servidor não suportar (downgrade silencioso!)
+    //   require     -> exige SSL; recusa a conexão se não conseguir
+    //                  criptografar. NÃO verifica se o certificado do
+    //                  servidor é confiável (vulnerável a man-in-the-middle
+    //                  ativo, mas protege contra escuta passiva de rede).
+    //   verify-ca   -> exige SSL + verifica que o certificado do servidor
+    //                  foi assinado por uma CA confiável (precisa de
+    //                  DB_SSLROOTCERT apontando pro certificado da CA).
+    //   verify-full -> verify-ca + confere se o hostname bate com o
+    //                  certificado. É o nível mais forte, protege contra
+    //                  man-in-the-middle de verdade.
+    //
+    // "SSL obrigatório" só é garantido pelos 3 últimos. disable/allow/prefer
+    // podem, em algum cenário, deixar a conexão trafegar sem criptografia -
+    // por isso o sistema recusa rodar com qualquer um desses três.
+    static bool sslModeGarantidamenteEncriptado(const std::string &sslmode)
+    {
+        static const std::set<std::string> modosSeguro = {"require", "verify-ca", "verify-full"};
+        return modosSeguro.count(sslmode) > 0;
+    }
+
     // Monta a connection string a partir de variáveis de ambiente,
     // evitando credenciais expostas no código-fonte / repositório Git.
     // Configure as variáveis antes de rodar o programa, por exemplo:
-    //   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_SSLMODE
+    //   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_SSLMODE,
+    //   DB_SSLROOTCERT (obrigatório se DB_SSLMODE for verify-ca/verify-full)
     static std::string montarConnStringDoAmbiente()
     {
         auto getEnvOrDefault = [](const char *nome, const std::string &padrao) -> std::string
@@ -29,7 +56,10 @@ private:
         std::string dbname = getEnvOrDefault("DB_NAME", "prefeitura_viagens");
         std::string user = getEnvOrDefault("DB_USER", "postgres");
         std::string password = getEnvOrDefault("DB_PASSWORD", "");
-        std::string sslmode = getEnvOrDefault("DB_SSLMODE", "prefer");
+        // Padrão agora é "require": SSL obrigatório por padrão, mesmo que
+        // ninguém configure DB_SSLMODE explicitamente.
+        std::string sslmode = getEnvOrDefault("DB_SSLMODE", "require");
+        std::string sslrootcert = getEnvOrDefault("DB_SSLROOTCERT", "");
 
         if (password.empty())
         {
@@ -39,12 +69,45 @@ private:
                       << std::endl;
         }
 
-        return "dbname=" + dbname +
-               " user=" + user +
-               " password=" + password +
-               " host=" + host +
-               " port=" + port +
-               " sslmode=" + sslmode;
+        // Recusa terminantemente rodar com um sslmode que pode deixar a
+        // conexão sem criptografia. Isso acontece ANTES de qualquer
+        // tentativa de conexão - o programa nem chega a tentar falar com
+        // o banco com uma configuração insegura.
+        if (!sslModeGarantidamenteEncriptado(sslmode))
+        {
+            throw std::runtime_error(
+                "DB_SSLMODE='" + sslmode + "' não garante conexão criptografada "
+                                           "(SSL é obrigatório neste sistema). Use 'require', 'verify-ca' "
+                                           "ou 'verify-full' na variável de ambiente DB_SSLMODE.");
+        }
+
+        // verify-ca e verify-full precisam do certificado da CA para
+        // conseguir validar o servidor - sem isso, o libpq rejeitaria a
+        // conexão de qualquer forma, mas com uma mensagem de erro menos
+        // clara. Falhamos aqui, cedo, com uma explicação melhor.
+        if ((sslmode == "verify-ca" || sslmode == "verify-full") && sslrootcert.empty())
+        {
+            throw std::runtime_error(
+                "DB_SSLMODE='" + sslmode + "' exige o certificado da CA. "
+                                           "Defina DB_SSLROOTCERT apontando para o arquivo .crt da "
+                                           "autoridade certificadora usada para assinar o certificado "
+                                           "do servidor PostgreSQL.");
+        }
+
+        std::string connStr =
+            "dbname=" + dbname +
+            " user=" + user +
+            " password=" + password +
+            " host=" + host +
+            " port=" + port +
+            " sslmode=" + sslmode;
+
+        if (!sslrootcert.empty())
+        {
+            connStr += " sslrootcert=" + sslrootcert;
+        }
+
+        return connStr;
     }
 
 public:
