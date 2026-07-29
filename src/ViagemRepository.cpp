@@ -48,6 +48,7 @@ void ViagemRepository::cadastrarViagem(const Viagem &viagem)
     catch (const std::exception &e)
     {
         std::cerr << "Erro ao cadastrar viagem: " << e.what() << std::endl;
+        throw std::runtime_error("Não foi possível cadastrar a viagem. Verifique os dados e tente novamente.");
     }
 }
 
@@ -95,6 +96,7 @@ std::vector<HistoricoPacienteItem> ViagemRepository::gerarRelatorioHistoricoPaci
     catch (const std::exception &e)
     {
         std::cerr << "Erro ao gerar histórico: " << e.what() << std::endl;
+        throw std::runtime_error("Erro ao gerar o histórico, tente novamente!");
     }
 
     return resultado;
@@ -128,6 +130,7 @@ VolumePassageirosResultado ViagemRepository::gerarRelatorioVolumePassageiros(con
     catch (const std::exception &e)
     {
         std::cerr << "Erro ao calcular volume de passageiros: " << e.what() << std::endl;
+        throw std::runtime_error("Erro ao calcular o volume de passageiros, tente novamente!");
     }
 
     return resultado;
@@ -200,6 +203,7 @@ std::vector<MapaViagemItem> ViagemRepository::gerarMapaViagemDiario(const std::s
     catch (const std::exception &e)
     {
         std::cerr << "Erro ao gerar mapa de viagem diário: " << e.what() << std::endl;
+        throw std::runtime_error("Erro ao gerar o mapa de viagem diário, tente novamente!");
     }
 
     return resultado;

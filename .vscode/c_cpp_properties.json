@@ -1,13 +1,13 @@
 {
     "configurations": [
         {
-            "name": "MinGW64",
+            "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:/msys64/mingw64/include/**"
+                "C:/msys64/mingw64/include/**",
+                "C:/msys64/mingw64/include/qt6/**"
             ],
-            "defines": [],
-            "compilerPath": "C:/mingw64/bin/g++.exe",
+            "compilerPath": "C:/msys64/mingw64/bin/g++.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "windows-gcc-x64"
