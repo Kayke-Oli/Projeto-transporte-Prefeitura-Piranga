@@ -25,13 +25,80 @@ void ViewPacientes::configurarFormulario()
 
     txtCpf = new QLineEdit(this);
     txtCpf->setPlaceholderText("000.000.000-00");
-    // Validação rígida: Só aceita no formato exato de CPF. Evita crash no SQL.
-    QRegularExpression regexCpf("\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}");
-    QValidator *validadorCpf = new QRegularExpressionValidator(regexCpf, this);
-    txtCpf->setValidator(validadorCpf);
+    txtCpf->setMaxLength(14); // Limita o tamanho máximo com a pontuação (11 números + 3 caracteres de pontuação)
+
+    // Formata automaticamente conforme o usuário digita, sem poluir a tela antes
+    connect(txtCpf, &QLineEdit::textChanged, this, [this](const QString &texto)
+            {
+    // Remove tudo que não for número para limpar a string
+    QString numeros = texto;
+    numeros.remove(QRegularExpression("[^\\d]"));
+
+    // Limita a 11 dígitos numéricos reais
+    if (numeros.length() > 11) {
+        numeros = numeros.left(11);
+    }
+
+    QString formatado = "";
+    int tamanho = numeros.length();
+
+    // Aplica a máscara visual dinamicamente
+    for (int i = 0; i < tamanho; ++i) {
+        if (i == 3 || i == 6) {
+            formatado += ".";
+        } else if (i == 9) {
+            formatado += "-";
+        }
+        formatado += numeros[i];
+    }
+
+    // Evita loop infinito bloqueando os sinais momentaneamente se o texto mudar
+    QLineEdit *campo = qobject_cast<QLineEdit*>(QObject::sender());
+    if (campo && campo->text() != formatado) {
+        int cursor = campo->cursorPosition();
+        campo->blockSignals(true);
+        campo->setText(formatado);
+        campo->blockSignals(false);
+    } });
 
     txtTelefone = new QLineEdit(this);
     txtTelefone->setPlaceholderText("(00) 00000-0000");
+    txtTelefone->setMaxLength(15); // Tamanho máximo com a formatação completa
+
+    // Formata automaticamente o telefone no padrão (99) 99999-9999 conforme o usuário digita
+    connect(txtTelefone, &QLineEdit::textChanged, this, [this](const QString &texto)
+            {
+    // Remove tudo que não for número
+    QString numeros = texto;
+    numeros.remove(QRegularExpression("[^\\d]"));
+
+    // Limita a 11 dígitos numéricos (DDD + 9 dígitos do celular)
+    if (numeros.length() > 11) {
+        numeros = numeros.left(11);
+    }
+
+    QString formatado = "";
+    int tamanho = numeros.length();
+
+    // Aplica a máscara visual dinamicamente para o formato (99) 99999-9999
+    for (int i = 0; i < tamanho; ++i) {
+        if (i == 0) {
+            formatado += "(";
+        } else if (i == 2) {
+            formatado += ") ";
+        } else if (i == 7) {
+            formatado += "-";
+        }
+        formatado += numeros[i];
+    }
+
+    // Atualiza o campo evitando loops infinitos de sinal
+    QLineEdit *campo = qobject_cast<QLineEdit*>(QObject::sender());
+    if (campo && campo->text() != formatado) {
+        campo->blockSignals(true);
+        campo->setText(formatado);
+        campo->blockSignals(false);
+    } });
 
     txtEndereco = new QLineEdit(this);
 
@@ -72,17 +139,34 @@ void ViewPacientes::salvarPaciente()
 
     // 2. Transição segura para o Domínio/Banco (Back-end)
     Paciente p;
-    p.nome = nome.toStdString();
+    p.nomeCompleto = nome.toStdString();
     p.cpf = cpf.toStdString();
     p.telefone = txtTelefone->text().trimmed().toStdString();
     p.endereco = txtEndereco->text().trimmed().toStdString();
 
     try
     {
+
         // Bloqueia o botão para evitar cliques duplos que geram duplicidade
         btnSalvar->setEnabled(false);
 
         m_repo.cadastrar(p); // Aqui o PostgreSQL garante a transação
+        auto idGerado = PacienteRepository->cadastrar(p);
+
+        if (idGerado.has_value())
+        {
+            // Só avisa que deu certo se o banco retornou o ID com sucesso!
+            QMessageBox::information(this, "Sucesso", "Paciente cadastrado com sucesso!");
+            p.nomeCompleto->clear();
+            p.cpf->clear();
+            p.endereco->clear();
+            p.telefone->clear();
+        }
+        else
+        {
+            // Se deu erro (como CPF duplicado), avisa o usuário
+            QMessageBox::warning(this, "Atenção", "Não foi possível cadastrar o paciente. Verifique se o CPF já está cadastrado.");
+        }
 
         QMessageBox::information(this, "Sucesso", "Paciente cadastrado com sucesso no sistema!");
 

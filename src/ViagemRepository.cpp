@@ -18,10 +18,10 @@ void ViagemRepository::cadastrarViagem(const Viagem &viagem)
         std::string dataViagemISO = DataUtils::paraISO(viagem.dataViagem);
 
         // Insere a viagem e retorna o ID gerado para ser usado na tabela N:N
-        pqxx::result res = transacao.exec_params(
+        pqxx::result res = transacao.exec(
             "INSERT INTO Viagens (data_viagem, cidade_destino, id_carro, id_motorista) "
             "VALUES ($1, $2, $3, $4) RETURNING id_viagem",
-            dataViagemISO, viagem.cidadeDestino, viagem.veiculoId, viagem.motoristaId);
+            pqxx::params{dataViagemISO, viagem.cidadeDestino, viagem.veiculoId, viagem.motoristaId});
 
         int id_viagem = res[0][0].as<int>();
 
@@ -30,15 +30,15 @@ void ViagemRepository::cadastrarViagem(const Viagem &viagem)
         {
             if (pv.acompanhanteId.has_value())
             {
-                transacao.exec_params(
+                transacao.exec(
                     "INSERT INTO Viagem_Pacientes (id_viagem, id_paciente, id_acompanhante) VALUES ($1, $2, $3)",
-                    id_viagem, pv.pacienteId, pv.acompanhanteId.value());
+                    pqxx::params{id_viagem, pv.pacienteId, pv.acompanhanteId.value()});
             }
             else
             {
-                transacao.exec_params(
+                transacao.exec(
                     "INSERT INTO Viagem_Pacientes (id_viagem, id_paciente, id_acompanhante) VALUES ($1, $2, NULL)",
-                    id_viagem, pv.pacienteId);
+                    pqxx::params{id_viagem, pv.pacienteId});
             }
         }
 
@@ -74,7 +74,7 @@ std::vector<HistoricoPacienteItem> ViagemRepository::gerarRelatorioHistoricoPaci
             "WHERE p.cpf = $1 "
             "ORDER BY v.data_viagem DESC";
 
-        pqxx::result res = transacao.exec_params(sql, cpfPaciente);
+        pqxx::result res = transacao.exec(sql, pqxx::params{cpfPaciente});
 
         for (auto row : res)
         {
@@ -121,7 +121,7 @@ VolumePassageirosResultado ViagemRepository::gerarRelatorioVolumePassageiros(con
             "(SELECT COUNT(*) FROM Viagem_Pacientes vp JOIN Viagens v ON vp.id_viagem = v.id_viagem WHERE v.data_viagem BETWEEN $1 AND $2) AS total_pacientes, "
             "(SELECT COUNT(id_acompanhante) FROM Viagem_Pacientes vp JOIN Viagens v ON vp.id_viagem = v.id_viagem WHERE v.data_viagem BETWEEN $1 AND $2) AS total_acompanhantes";
 
-        pqxx::result res = transacao.exec_params(sql, dataInicioISO, dataFimISO);
+        pqxx::result res = transacao.exec(sql, pqxx::params{dataInicioISO, dataFimISO});
 
         resultado.totalPacientes = res[0]["total_pacientes"].as<int>();
         resultado.totalAcompanhantes = res[0]["total_acompanhantes"].as<int>();
@@ -161,7 +161,7 @@ std::vector<MapaViagemItem> ViagemRepository::gerarMapaViagemDiario(const std::s
             "WHERE v.data_viagem = $1 "
             "ORDER BY v.id_viagem";
 
-        pqxx::result res = transacao.exec_params(sql, dataViagemISO);
+        pqxx::result res = transacao.exec(sql, pqxx::params{dataViagemISO});
 
         int idViagemAtual = -1;
 

@@ -20,7 +20,9 @@ public:
     ViagemRepository(Database &database);
 
     void cadastrarViagem(const Viagem &viagem);
-    void gerarRelatorioHistoricoPaciente(const std::string &cpfPaciente);
-    int gerarRelatorioVolumePassageiros(const std::string &dataInicio, const std::string &dataFim);
-    void gerarMapaViagemDiario(const std::string &dataViagem);
+
+    // Assinaturas corrigidas para retornarem os tipos corretos:
+    std::vector<HistoricoPacienteItem> gerarRelatorioHistoricoPaciente(const std::string &cpfPaciente);
+    VolumePassageirosResultado gerarRelatorioVolumePassageiros(const std::string &dataInicio, const std::string &dataFim);
+    std::vector<MapaViagemItem> gerarMapaViagemDiario(const std::string &dataViagem);
 };

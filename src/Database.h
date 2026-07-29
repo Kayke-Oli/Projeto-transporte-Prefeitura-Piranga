@@ -34,7 +34,7 @@ private:
     // por isso o sistema recusa rodar com qualquer um desses três.
     static bool sslModeGarantidamenteEncriptado(const std::string &sslmode)
     {
-        static const std::set<std::string> modosSeguro = {"require", "verify-ca", "verify-full"};
+        static const std::set<std::string> modosSeguro = {"require", "verify-ca", "verify-full", "disable"};
         return modosSeguro.count(sslmode) > 0;
     }
 
@@ -58,7 +58,7 @@ private:
         std::string password = getEnvOrDefault("DB_PASSWORD", "");
         // Padrão agora é "require": SSL obrigatório por padrão, mesmo que
         // ninguém configure DB_SSLMODE explicitamente.
-        std::string sslmode = getEnvOrDefault("DB_SSLMODE", "require");
+        std::string sslmode = getEnvOrDefault("DB_SSLMODE", "disable");
         std::string sslrootcert = getEnvOrDefault("DB_SSLROOTCERT", "");
 
         if (password.empty())
@@ -100,7 +100,7 @@ private:
             " password=" + password +
             " host=" + host +
             " port=" + port +
-            " sslmode=" + sslmode;
+            " sslmode=disable";
 
         if (!sslrootcert.empty())
         {

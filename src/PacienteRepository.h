@@ -21,10 +21,10 @@ public:
         {
             db.exigirConexao();
             pqxx::work transacao(*db.getConexao());
-            pqxx::result res = transacao.exec_params(
+            pqxx::result res = transacao.exec(
                 "INSERT INTO Pacientes (cpf, nome, telefone, endereco) VALUES ($1, $2, $3, $4) "
                 "RETURNING id_paciente",
-                paciente.cpf, paciente.nomeCompleto, paciente.telefone, paciente.endereco);
+                pqxx::params{paciente.cpf, paciente.nomeCompleto, paciente.telefone, paciente.endereco});
             transacao.commit();
             int id = res[0][0].as<int>();
             std::cout << "Paciente cadastrado com sucesso! ID: " << id << std::endl;
@@ -37,13 +37,14 @@ public:
         }
     }
 
-    std::optional<Paciente> buscarPorCPF(const std::string &cpf)
+    std::optional<Paciente>
+    buscarPorCPF(const std::string &cpf)
     {
         try
         {
             db.exigirConexao();
             pqxx::work transacao(*db.getConexao());
-            pqxx::result res = transacao.exec_params("SELECT id_paciente, cpf, nome, telefone, endereco FROM Pacientes WHERE cpf = $1", cpf);
+            pqxx::result res = transacao.exec("SELECT id_paciente, cpf, nome, telefone, endereco FROM Pacientes WHERE cpf = $1", pqxx::params{cpf});
 
             if (!res.empty())
             {

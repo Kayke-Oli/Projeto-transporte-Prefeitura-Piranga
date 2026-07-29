@@ -20,10 +20,10 @@ public:
         {
             db.exigirConexao();
             pqxx::work transacao(*db.getConexao());
-            pqxx::result res = transacao.exec_params(
+            pqxx::result res = transacao.exec(
                 "INSERT INTO Acompanhantes (cpf, nome, telefone) VALUES ($1, $2, $3) "
                 "RETURNING id_acompanhante",
-                acompanhante.cpf, acompanhante.nomeCompleto, acompanhante.telefone);
+                pqxx::params{acompanhante.cpf, acompanhante.nomeCompleto, acompanhante.telefone});
             transacao.commit();
             int id = res[0][0].as<int>();
             std::cout << "Acompanhante cadastrado com sucesso! ID: " << id << std::endl;

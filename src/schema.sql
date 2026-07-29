@@ -10,7 +10,7 @@
 -- Tabela: Pacientes
 CREATE TABLE Pacientes (
     id_paciente SERIAL PRIMARY KEY,
-    cpf         VARCHAR(11)  NOT NULL UNIQUE,
+    cpf         VARCHAR(14)  NOT NULL UNIQUE,
     nome        VARCHAR(150) NOT NULL,
     telefone    VARCHAR(20),
     endereco    VARCHAR(255)
@@ -19,7 +19,7 @@ CREATE TABLE Pacientes (
 -- Tabela: Acompanhantes
 CREATE TABLE Acompanhantes (
     id_acompanhante SERIAL PRIMARY KEY,
-    cpf             VARCHAR(11)  NOT NULL UNIQUE,
+    cpf             VARCHAR(14)  NOT NULL UNIQUE,
     nome            VARCHAR(150) NOT NULL,
     telefone        VARCHAR(20)
 );
@@ -28,7 +28,7 @@ CREATE TABLE Acompanhantes (
 CREATE TABLE Motoristas (
     id_motorista SERIAL PRIMARY KEY,
     nome         VARCHAR(150) NOT NULL,
-    cpf          VARCHAR(11)  NOT NULL UNIQUE
+    cpf          VARCHAR(14)  NOT NULL UNIQUE
 );
 
 -- Tabela: Carros

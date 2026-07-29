@@ -20,9 +20,9 @@ public:
         {
             db.exigirConexao();
             pqxx::work transacao(*db.getConexao());
-            pqxx::result res = transacao.exec_params(
+            pqxx::result res = transacao.exec(
                 "INSERT INTO Carros (placa, modelo) VALUES ($1, $2) RETURNING id_carro",
-                veiculo.placa, veiculo.modelo);
+                pqxx::params{veiculo.placa, veiculo.modelo});
             transacao.commit();
             int id = res[0][0].as<int>();
             std::cout << "Veículo cadastrado com sucesso! ID: " << id << std::endl;
