@@ -1,0 +1,4 @@
+build/
+*.exe
+moc_*.cpp
+ui_*.h
