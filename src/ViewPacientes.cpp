@@ -1,4 +1,5 @@
 #include "ViewPacientes.h"
+#include "CpfUtils.h"
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QRegularExpressionValidator>
@@ -121,7 +122,7 @@ void ViewPacientes::configurarFormulario()
 
 void ViewPacientes::salvarPaciente()
 {
-    // 1. Validação de Interface (Front-end)
+    // Validação de Interface (Front-end)
     QString nome = txtNome->text().trimmed();
     QString cpf = txtCpf->text().trimmed();
 
@@ -147,40 +148,41 @@ void ViewPacientes::salvarPaciente()
     try
     {
 
-        // Bloqueia o botão para evitar cliques duplos que geram duplicidade
-        btnSalvar->setEnabled(false);
+        // Valida usando CPFUtils
+        if (!CpfUtils::verificar(p.cpf))
+        {
+            QMessageBox::warning(this, "CPF Inválido", "O CPF informado não é válido. Por favor, verifique os números digitados.");
+            return; // Interrompe o cadastro na hora
+        }
 
-        m_repo.cadastrar(p); // Aqui o PostgreSQL garante a transação
-        auto idGerado = PacienteRepository->cadastrar(p);
+        // Faz o cadastro uma única vez
+        auto idGerado = m_repo.cadastrar(p);
+
+        // Bloqueia o botão para evitar cliques duplos
+        btnSalvar->setEnabled(false);
 
         if (idGerado.has_value())
         {
-            // Só avisa que deu certo se o banco retornou o ID com sucesso!
-            QMessageBox::information(this, "Sucesso", "Paciente cadastrado com sucesso!");
-            p.nomeCompleto->clear();
-            p.cpf->clear();
-            p.endereco->clear();
-            p.telefone->clear();
+            // Sucesso: avisa e limpa os campos da tela
+            QMessageBox::information(this, "Sucesso", "Paciente cadastrado com sucesso! ID: " + QString::number(idGerado.value()));
+
+            txtNome->clear();
+            txtCpf->clear();
+            txtTelefone->clear();
+            txtEndereco->clear();
         }
         else
         {
-            // Se deu erro (como CPF duplicado), avisa o usuário
-            QMessageBox::warning(this, "Atenção", "Não foi possível cadastrar o paciente. Verifique se o CPF já está cadastrado.");
+            QMessageBox::warning(this, "Atenção", "Não foi possível cadastrar o paciente.\nPaciente já cadastrado ou CPF inexistente!");
         }
 
-        QMessageBox::information(this, "Sucesso", "Paciente cadastrado com sucesso no sistema!");
-
-        // Limpa os campos
-        txtNome->clear();
-        txtCpf->clear();
-        txtTelefone->clear();
-        txtEndereco->clear();
+        // Reativa o botão no final
+        btnSalvar->setEnabled(true);
     }
     catch (const std::exception &e)
     {
-        // Trata erro de violação de UNIQUE (CPF repetido) ou queda de banco
-        QMessageBox::critical(this, "Erro de Banco de Dados",
-                              QString("Não foi possível salvar o paciente.\nDetalhes: ") + e.what());
+        btnSalvar->setEnabled(true);
+        QMessageBox::critical(this, "Erro Crítico", QString("Erro ao cadastrar: ") + e.what());
     }
 
     // Libera o botão novamente independente do que aconteceu

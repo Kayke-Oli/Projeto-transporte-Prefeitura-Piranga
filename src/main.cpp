@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 
     db->conectar();
 
-    // Instancia e exibe a tela principal que você construiu
+    // Instancia e exibe a tela principal
     MainWindow w(*db);
     w.show();
 

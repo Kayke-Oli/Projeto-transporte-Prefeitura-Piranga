@@ -15,8 +15,7 @@
 namespace CpfUtils
 {
     // Espera uma string com exatamente 11 dígitos numéricos, sem pontuação
-    // (ex.: "11144477735", não "111.444.777-35"). Se seu formulário aceita
-    // CPF formatado, remova pontos e traço antes de chamar esta função.
+    // (ex.: "11144477735", não "111.444.777-35").
     inline bool verificar(const std::string &cpf)
     {
         if (cpf.length() != 11)
@@ -29,9 +28,6 @@ namespace CpfUtils
             return false;
         }
 
-        // CPFs com todos os dígitos iguais (111.111.111-11, 000.000.000-00,
-        // etc.) passam matematicamente no cálculo abaixo, mas nunca são
-        // emitidos pela Receita Federal - precisam ser rejeitados à parte.
         if (std::all_of(cpf.begin(), cpf.end(), [&](char c)
                         { return c == cpf[0]; }))
         {

@@ -1,5 +1,4 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
 
 #include <QMainWindow>
 #include <QStackedWidget>
@@ -39,5 +38,3 @@ private:
     void configurarInterface();
     void configurarEstilo();
 };
-
-#endif

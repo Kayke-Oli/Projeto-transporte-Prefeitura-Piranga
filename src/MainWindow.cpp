@@ -1,5 +1,5 @@
 #include "MainWindow.h"
-#include "ViewPacientes.h" // A classe que criaremos abaixo
+#include "ViewPacientes.h"
 #include <QStatusBar>
 #include <QMessageBox>
 

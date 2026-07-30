@@ -1,5 +1,4 @@
-#ifndef VIEWPACIENTES_H
-#define VIEWPACIENTES_H
+#pragma once
 
 #include <QWidget>
 #include <QLineEdit>
@@ -32,5 +31,3 @@ private:
 
     void configurarFormulario();
 };
-
-#endif
