@@ -2,30 +2,37 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Compilar Sistema Prefeitura (Qt + PostgreSQL)",
+            "label": "Configurar (CMake)",
             "type": "shell",
-            "command": "C:\\msys64\\mingw64\\share\\qt6\\bin\\moc.exe src/MainWindow.h -o src/moc_MainWindow.cpp && C:\\msys64\\mingw64\\share\\qt6\\bin\\moc.exe src/ViewPacientes.h -o src/moc_ViewPacientes.cpp && C:\\msys64\\mingw64\\bin\\g++.exe src/*.cpp -o sistema_prefeitura.exe -I C:/msys64/mingw64/include -I C:/msys64/mingw64/include/qt6 -I C:/msys64/mingw64/include/qt6/QtWidgets -I C:/msys64/mingw64/include/qt6/QtGui -I C:/msys64/mingw64/include/qt6/QtCore -L C:/msys64/mingw64/lib -lQt6Widgets -lQt6Gui -lQt6Core -lpqxx -lpq",
+            "command": "cmake -S . -B build -G \"MinGW Makefiles\" -DCMAKE_PREFIX_PATH=C:/msys64/mingw64",
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {
                     "PATH": "C:\\msys64\\mingw64\\bin;${env:PATH}"
-                },
-                "shell": {
-                    "executable": "cmd.exe",
-                    "args": [
-                        "/d",
-                        "/c"
-                    ]
                 }
             },
+            "problemMatcher": []
+        },
+        {
+            "label": "Compilar Sistema Prefeitura (Qt + PostgreSQL)",
+            "type": "shell",
+            "command": "cmake --build build",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PATH": "C:\\msys64\\mingw64\\bin;${env:PATH}"
+                }
+            },
+            "dependsOn": [
+                "Configurar (CMake)"
+            ],
             "problemMatcher": [
                 "$gcc"
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
-            },
-            "detail": "Gera os MOCs do Qt6 e compila com PostgreSQL forçando o PATH do MSYS2"
+            }
         }
     ]
 }
