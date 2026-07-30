@@ -1,5 +1,6 @@
 #include "MainWindow.h"
-#include "ViewPacientes.h"
+#include "ViewInicio.h"
+#include "ViewPacientesMenu.h"
 #include <QStatusBar>
 #include <QMessageBox>
 
@@ -7,9 +8,8 @@ MainWindow::MainWindow(Database &db, QWidget *parent)
     : QMainWindow(parent), m_db(db)
 {
     setWindowTitle("Sistema de Logística - Prefeitura");
-    resize(1024, 768); // Resolução padrão segura
+    resize(1024, 768);
 
-    // Testa a conexão ao abrir o sistema
     try
     {
         m_db.exigirConexao();
@@ -21,73 +21,64 @@ MainWindow::MainWindow(Database &db, QWidget *parent)
     }
 
     configurarInterface();
-    configurarEstilo();
 }
 
-MainWindow::~MainWindow()
-{
-    // O Qt destrói automaticamente tudo que está atrelado ao 'this'
-}
+MainWindow::~MainWindow() {}
 
 void MainWindow::configurarInterface()
 {
-    m_centralWidget = new QWidget(this);
-    setCentralWidget(m_centralWidget);
-
-    m_mainLayout = new QHBoxLayout(m_centralWidget);
-    m_mainLayout->setContentsMargins(0, 0, 0, 0); // Remove bordas brancas
-    m_mainLayout->setSpacing(0);
-
-    // Menu Lateral (Navegação Segura)
-    m_menuLateral = new QListWidget(this);
-    m_menuLateral->setFixedWidth(200);
-    m_menuLateral->addItem("Pacientes");
-    m_menuLateral->addItem("Viagens");
-    m_menuLateral->addItem("Relatórios");
-
-    // Gerenciador de Telas
     m_stackTelas = new QStackedWidget(this);
+    setCentralWidget(m_stackTelas);
 
-    // Instancia as telas passando o banco de dados
-    m_telaPacientes = new ViewPacientes(m_db, this);
-    // m_telaViagens = new ViewViagens(m_db, this); // Exemplo futuro
+    m_telaInicio = new ViewInicio(this);
+    m_telaMenuPacientes = new ViewPacientesMenu(this);
+    m_telaPacientesCadastrar = new ViewPacientes(m_db, ModoPaciente::Cadastrar, this);
+    m_telaPacientesAtualizar = new ViewPacientes(m_db, ModoPaciente::Atualizar, this);
+    m_telaPacientesExcluir = new ViewPacientes(m_db, ModoPaciente::Excluir, this);
+    m_telaPacientesConsultar = new ViewPacientes(m_db, ModoPaciente::Consultar, this);
 
-    m_stackTelas->addWidget(m_telaPacientes);
-    // m_stackTelas->addWidget(m_telaViagens);
+    m_stackTelas->addWidget(m_telaInicio);
+    m_stackTelas->addWidget(m_telaMenuPacientes);
+    m_stackTelas->addWidget(m_telaPacientesCadastrar);
+    m_stackTelas->addWidget(m_telaPacientesAtualizar);
+    m_stackTelas->addWidget(m_telaPacientesExcluir);
+    m_stackTelas->addWidget(m_telaPacientesConsultar);
 
-    // Monta o layout: Menu na esquerda, telas na direita
-    m_mainLayout->addWidget(m_menuLateral);
-    m_mainLayout->addWidget(m_stackTelas);
+    connect(m_telaInicio, &ViewInicio::pacientesSelecionado, this, &MainWindow::abrirMenuPacientes);
+    connect(m_telaInicio, &ViewInicio::viagensSelecionado, this, [this]
+            { QMessageBox::information(this, "Em construção", "A tela de Viagens ainda está sendo desenvolvida."); });
+    connect(m_telaInicio, &ViewInicio::relatoriosSelecionado, this, [this]
+            { QMessageBox::information(this, "Em construção", "A tela de Relatórios ainda está sendo desenvolvida."); });
 
-    connect(m_menuLateral, &QListWidget::currentRowChanged, this, &MainWindow::alterarTela);
+    connect(m_telaMenuPacientes, &ViewPacientesMenu::opcaoEscolhida, this, &MainWindow::abrirTelaPaciente);
+    connect(m_telaMenuPacientes, &ViewPacientesMenu::voltarSolicitado, this, &MainWindow::voltarParaInicio);
+
+    connect(m_telaPacientesCadastrar, &ViewPacientes::voltarSolicitado, this, &MainWindow::abrirMenuPacientes);
+    connect(m_telaPacientesAtualizar, &ViewPacientes::voltarSolicitado, this, &MainWindow::abrirMenuPacientes);
+    connect(m_telaPacientesExcluir, &ViewPacientes::voltarSolicitado, this, &MainWindow::abrirMenuPacientes);
+    connect(m_telaPacientesConsultar, &ViewPacientes::voltarSolicitado, this, &MainWindow::abrirMenuPacientes);
+
+    m_stackTelas->setCurrentWidget(m_telaInicio);
 }
 
-void MainWindow::alterarTela(int index)
+void MainWindow::abrirMenuPacientes() { m_stackTelas->setCurrentWidget(m_telaMenuPacientes); }
+void MainWindow::voltarParaInicio() { m_stackTelas->setCurrentWidget(m_telaInicio); }
+
+void MainWindow::abrirTelaPaciente(ModoPaciente modo)
 {
-    if (index >= 0 && index < m_stackTelas->count())
+    switch (modo)
     {
-        m_stackTelas->setCurrentIndex(index);
+    case ModoPaciente::Cadastrar:
+        m_stackTelas->setCurrentWidget(m_telaPacientesCadastrar);
+        break;
+    case ModoPaciente::Atualizar:
+        m_stackTelas->setCurrentWidget(m_telaPacientesAtualizar);
+        break;
+    case ModoPaciente::Excluir:
+        m_stackTelas->setCurrentWidget(m_telaPacientesExcluir);
+        break;
+    case ModoPaciente::Consultar:
+        m_stackTelas->setCurrentWidget(m_telaPacientesConsultar);
+        break;
     }
-}
-
-void MainWindow::configurarEstilo()
-{
-    // Aplica CSS nativo do Qt para evitar desalinhamento visual
-    this->setStyleSheet(R"(
-        QListWidget {
-            background-color: #2c3e50;
-            color: white;
-            font-size: 14px;
-            border: none;
-            padding-top: 10px;
-        }
-        QListWidget::item {
-            padding: 15px;
-            border-bottom: 1px solid #34495e;
-        }
-        QListWidget::item:selected {
-            background-color: #3498db;
-            font-weight: bold;
-        }
-    )");
 }

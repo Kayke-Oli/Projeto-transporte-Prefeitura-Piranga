@@ -82,4 +82,30 @@ public:
         }
         return std::nullopt;
     }
+    // Busca parcial por nome (case-insensitive). Pode retornar vários
+    // resultados - diferente de buscarPorCPF, que é busca exata e única.
+    std::vector<Paciente> buscarPorNome(const std::string &nomeParcial)
+    {
+        std::vector<Paciente> resultados;
+
+        db.exigirConexao();
+        pqxx::work transacao(*db.getConexao());
+        pqxx::result res = transacao.exec(
+            "SELECT id_paciente, cpf, nome, telefone, endereco FROM Pacientes "
+            "WHERE nome ILIKE '%' || $1 || '%' ORDER BY nome LIMIT 20",
+            pqxx::params{nomeParcial});
+
+        for (const auto &linha : res)
+        {
+            Paciente p;
+            p.id = linha["id_paciente"].as<int>();
+            p.cpf = linha["cpf"].c_str();
+            p.nomeCompleto = linha["nome"].c_str();
+            p.telefone = linha["telefone"].c_str();
+            p.endereco = linha["endereco"].c_str();
+            resultados.push_back(p);
+        }
+
+        return resultados;
+    }
 };

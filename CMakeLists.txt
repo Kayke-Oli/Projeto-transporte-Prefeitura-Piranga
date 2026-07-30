@@ -39,6 +39,8 @@ add_executable(sistema_prefeitura
     src/main.cpp
     src/MainWindow.cpp
     src/ViewPacientes.cpp
+    src/ViewInicio.cpp
+    src/ViewPacientesMenu.cpp
     src/ViagemRepository.cpp
     src/ViewPacientes.ui
 )

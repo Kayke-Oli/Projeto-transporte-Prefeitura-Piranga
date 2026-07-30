@@ -4,7 +4,16 @@
         {
             "label": "Configurar (CMake)",
             "type": "shell",
-            "command": "cmake -S . -B build -G \"MinGW Makefiles\" -DCMAKE_PREFIX_PATH=C:/msys64/mingw64",
+            "command": "cmake",
+            "args": [
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-G",
+                "MinGW Makefiles",
+                "-DCMAKE_PREFIX_PATH=C:/msys64/mingw64"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {
@@ -16,7 +25,11 @@
         {
             "label": "Compilar Sistema Prefeitura (Qt + PostgreSQL)",
             "type": "shell",
-            "command": "cmake --build build",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "build"
+            ],
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {

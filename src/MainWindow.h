@@ -2,14 +2,11 @@
 
 #include <QMainWindow>
 #include <QStackedWidget>
-#include <QListWidget>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 #include "Database.h"
+#include "ViewPacientes.h" // para ModoPaciente
 
-// Declaração antecipada das views (telas)
-class ViewPacientes;
-class ViewViagens;
+class ViewInicio;
+class ViewPacientesMenu;
 
 class MainWindow : public QMainWindow
 {
@@ -20,21 +17,20 @@ public:
     ~MainWindow();
 
 private slots:
-    void alterarTela(int index);
+    void abrirMenuPacientes();
+    void abrirTelaPaciente(ModoPaciente modo);
+    void voltarParaInicio();
 
 private:
     Database &m_db;
-
-    // Componentes de Layout
-    QWidget *m_centralWidget;
-    QHBoxLayout *m_mainLayout;
-    QListWidget *m_menuLateral;
     QStackedWidget *m_stackTelas;
 
-    // Instâncias das Telas
-    ViewPacientes *m_telaPacientes;
-    ViewViagens *m_telaViagens;
+    ViewInicio *m_telaInicio;
+    ViewPacientesMenu *m_telaMenuPacientes;
+    ViewPacientes *m_telaPacientesCadastrar;
+    ViewPacientes *m_telaPacientesAtualizar;
+    ViewPacientes *m_telaPacientesExcluir;
+    ViewPacientes *m_telaPacientesConsultar;
 
     void configurarInterface();
-    void configurarEstilo();
 };
