@@ -17,6 +17,8 @@ public:
 
 private slots:
     void salvarPaciente();
+    void atualizarPaciente();
+    void deletarPaciente();
 
 private:
     Database &m_db;

@@ -14,27 +14,46 @@ private:
 public:
     PacienteRepository(Database &database) : db(database) {}
 
-    // Retorna o ID gerado (>0) em caso de sucesso, ou std::nullopt em caso de erro.
-    std::optional<int> cadastrar(const Paciente &paciente)
+    void atualizar(const Paciente &paciente)
     {
-        try
-        {
-            db.exigirConexao();
-            pqxx::work transacao(*db.getConexao());
-            pqxx::result res = transacao.exec(
-                "INSERT INTO Pacientes (cpf, nome, telefone, endereco) VALUES ($1, $2, $3, $4) "
-                "RETURNING id_paciente",
-                pqxx::params{paciente.cpf, paciente.nomeCompleto, paciente.telefone, paciente.endereco});
-            transacao.commit();
-            int id = res[0][0].as<int>();
-            std::cout << "Paciente cadastrado com sucesso! ID: " << id << std::endl;
-            return id;
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "Erro ao cadastrar paciente: " << e.what() << std::endl;
-            return std::nullopt;
-        }
+        db.exigirConexao();
+        pqxx::work transacao(*db.getConexao());
+
+        // Atualiza nome, telefone e endereço buscando pelo CPF
+        transacao.exec(
+            "UPDATE Pacientes SET nome = $1, telefone = $2, endereco = $3 WHERE cpf = $4",
+            pqxx::params{paciente.nomeCompleto, paciente.telefone, paciente.endereco, paciente.cpf});
+
+        transacao.commit();
+    }
+
+    void deletar(const std::string &cpf)
+    {
+        db.exigirConexao();
+        pqxx::work transacao(*db.getConexao());
+
+        // O banco vai disparar erro 23503 aqui se o paciente tiver viagens!
+        transacao.exec(
+            "DELETE FROM Pacientes WHERE cpf = $1",
+            pqxx::params{cpf});
+
+        transacao.commit();
+    }
+
+    int cadastrar(const Paciente &paciente)
+    {
+        db.exigirConexao();
+        pqxx::work transacao(*db.getConexao());
+
+        // O pqxx vai lançar uma exceção automaticamente se violar restrições (como CPF duplicado)
+        pqxx::result res = transacao.exec(
+            "INSERT INTO Pacientes (cpf, nome, telefone, endereco) VALUES ($1, $2, $3, $4) RETURNING id_paciente",
+            pqxx::params{paciente.cpf, paciente.nomeCompleto, paciente.telefone, paciente.endereco});
+
+        transacao.commit();
+
+        int id = res[0][0].as<int>();
+        return id; // Retorna direto o ID gerado, ou lança exceção em caso de falha
     }
 
     std::optional<Paciente>

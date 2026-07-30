@@ -138,53 +138,159 @@ void ViewPacientes::salvarPaciente()
         return;
     }
 
-    // 2. Transição segura para o Domínio/Banco (Back-end)
-    Paciente p;
-    p.nomeCompleto = nome.toStdString();
-    p.cpf = cpf.toStdString();
-    p.telefone = txtTelefone->text().trimmed().toStdString();
-    p.endereco = txtEndereco->text().trimmed().toStdString();
-
     try
     {
+        // Valida o CPF antes de qualquer operação
+        QString cpfDigitado = txtCpf->text();
 
-        // Valida usando CPFUtils
-        if (!CpfUtils::verificar(p.cpf))
+        if (!CpfUtils::verificar(cpfDigitado.toStdString()))
         {
             QMessageBox::warning(this, "CPF Inválido", "O CPF informado não é válido. Por favor, verifique os números digitados.");
-            return; // Interrompe o cadastro na hora
+            return;
         }
-
-        // Faz o cadastro uma única vez
-        auto idGerado = m_repo.cadastrar(p);
 
         // Bloqueia o botão para evitar cliques duplos
         btnSalvar->setEnabled(false);
 
-        if (idGerado.has_value())
-        {
-            // Sucesso: avisa e limpa os campos da tela
-            QMessageBox::information(this, "Sucesso", "Paciente cadastrado com sucesso! ID: " + QString::number(idGerado.value()));
+        // Monta o objeto Paciente
+        Paciente p;
+        p.nomeCompleto = txtNome->text().toStdString();
+        p.cpf = cpfDigitado.toStdString();
+        p.telefone = txtTelefone->text().toStdString();
+        p.endereco = txtEndereco->text().toStdString();
 
-            txtNome->clear();
-            txtCpf->clear();
-            txtTelefone->clear();
-            txtEndereco->clear();
+        // Executa o cadastro (agora retorna o int diretamente ou lança exceção)
+        int idGerado = m_repo.cadastrar(p);
+
+        // Se chegou aqui, deu certo!
+        QMessageBox::information(this, "Sucesso", "Paciente cadastrado com sucesso! ID: " + QString::number(idGerado));
+
+        txtNome->clear();
+        txtCpf->clear();
+        txtTelefone->clear();
+        txtEndereco->clear();
+
+        btnSalvar->setEnabled(true);
+    }
+    catch (const pqxx::sql_error &e)
+    {
+        btnSalvar->setEnabled(true);
+
+        // Tratamento específico para erros do PostgreSQL (como CPF duplicado ou FK Restrict)
+        std::string sqlState = e.sqlstate();
+
+        if (sqlState == "23505") // Código SQLSTATE para unique_violation (duplicidade)
+        {
+            QMessageBox::warning(this, "Atenção", "Este CPF já está cadastrado no sistema.");
+        }
+        else if (sqlState == "23503") // Código SQLSTATE para foreign_key_violation (restrição de exclusão/vínculo)
+        {
+            QMessageBox::warning(this, "Atenção", "Operação negada: existem registros vinculados a este item.");
         }
         else
         {
-            QMessageBox::warning(this, "Atenção", "Não foi possível cadastrar o paciente.\nPaciente já cadastrado ou CPF inexistente!");
+            QMessageBox::critical(this, "Erro no Banco de Dados", QString("Erro SQL: ") + e.what());
         }
-
-        // Reativa o botão no final
-        btnSalvar->setEnabled(true);
     }
     catch (const std::exception &e)
     {
         btnSalvar->setEnabled(true);
-        QMessageBox::critical(this, "Erro Crítico", QString("Erro ao cadastrar: ") + e.what());
+        QMessageBox::critical(this, "Erro Crítico", QString("Ocorreu um erro: ") + e.what());
     }
 
     // Libera o botão novamente independente do que aconteceu
     btnSalvar->setEnabled(true);
+}
+
+void ViewPacientes::atualizarPaciente()
+{
+    try
+    {
+        QString cpfDigitado = txtCpf->text();
+
+        // Valida o CPF
+        if (!CpfUtils::verificar(cpfDigitado.toStdString()))
+        {
+            QMessageBox::warning(this, "CPF Inválido", "O CPF informado não é válido.");
+            return;
+        }
+
+        // Bloqueia o botão durante o processamento
+        btnAtualizar->setEnabled(false);
+
+        Paciente p;
+        p.nomeCompleto = txtNome->text().toStdString();
+        p.cpf = cpfDigitado.toStdString();
+        p.telefone = txtTelefone->text().toStdString();
+        p.endereco = txtEndereco->text().toStdString();
+
+        // Chama o método de atualização do repositório
+        m_repo.atualizar(p);
+
+        QMessageBox::information(this, "Sucesso", "Dados do paciente atualizados com sucesso!");
+
+        btnAtualizar->setEnabled(true);
+    }
+    catch (const std::exception &e)
+    {
+        btnAtualizar->setEnabled(true);
+        QMessageBox::critical(this, "Erro Crítico", QString("Erro ao atualizar: ") + e.what());
+    }
+}
+
+void ViewPacientes::deletarPaciente()
+{
+    try
+    {
+        QString cpfDigitado = txtCpf->text();
+
+        if (cpfDigitado.isEmpty())
+        {
+            QMessageBox::warning(this, "Atenção", "Informe o CPF do paciente que deseja excluir.");
+            return;
+        }
+
+        // Pede confirmação antes de apagar
+        QMessageBox::StandardButton resposta;
+        resposta = QMessageBox::question(this, "Confirmar Exclusão",
+                                         "Tem certeza que deseja excluir permanentemente este paciente?",
+                                         QMessageBox::Yes | QMessageBox::No);
+
+        if (resposta == QMessageBox::Yes)
+        {
+            btnDeletar->setEnabled(false);
+
+            m_repo.deletar(cpfDigitado.toStdString());
+
+            QMessageBox::information(this, "Sucesso", "Paciente excluído com sucesso!");
+
+            // Limpa a tela após excluir
+            txtNome->clear();
+            txtCpf->clear();
+            txtTelefone->clear();
+            txtEndereco->clear();
+
+            btnDeletar->setEnabled(true);
+        }
+    }
+    catch (const pqxx::sql_error &e)
+    {
+        btnDeletar->setEnabled(true);
+        std::string sqlState = e.sqlstate();
+
+        // Trata a restrição do banco de dados (paciente já viajou)
+        if (sqlState == "23503")
+        {
+            QMessageBox::warning(this, "Exclusão Negada", "Não é possível excluir este paciente pois ele possui viagens cadastradas no sistema.");
+        }
+        else
+        {
+            QMessageBox::critical(this, "Erro no Banco", QString("Erro SQL: ") + e.what());
+        }
+    }
+    catch (const std::exception &e)
+    {
+        btnDeletar->setEnabled(true);
+        QMessageBox::critical(this, "Erro Crítico", QString("Erro ao excluir: ") + e.what());
+    }
 }

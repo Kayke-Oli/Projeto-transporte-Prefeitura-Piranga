@@ -40,12 +40,18 @@ template <> constexpr inline auto ViewPacientes::qt_create_metaobjectdata<qt_met
     QtMocHelpers::StringRefStorage qt_stringData {
         "ViewPacientes",
         "salvarPaciente",
-        ""
+        "",
+        "atualizarPaciente",
+        "deletarPaciente"
     };
 
     QtMocHelpers::UintData qt_methods {
         // Slot 'salvarPaciente'
         QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'atualizarPaciente'
+        QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'deletarPaciente'
+        QtMocHelpers::SlotData<void()>(4, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -70,6 +76,8 @@ void ViewPacientes::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
         case 0: _t->salvarPaciente(); break;
+        case 1: _t->atualizarPaciente(); break;
+        case 2: _t->deletarPaciente(); break;
         default: ;
         }
     }
@@ -95,14 +103,14 @@ int ViewPacientes::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 1)
+        if (_id < 3)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 1;
+        _id -= 3;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 1)
+        if (_id < 3)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 1;
+        _id -= 3;
     }
     return _id;
 }
