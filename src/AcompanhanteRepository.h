@@ -1,38 +1,71 @@
 #pragma once
-#include "Entidades.h"
+
 #include "Database.h"
-#include <pqxx/pqxx>
+#include "Entidades.h"
 #include <optional>
-#include <iostream>
+#include <pqxx/pqxx>
+#include <string>
 
 class AcompanhanteRepository
 {
 private:
     Database &db;
 
-public:
-    AcompanhanteRepository(Database &database) : db(database) {}
-
-    // Retorna o ID gerado (>0) em caso de sucesso, ou std::nullopt em caso de erro.
-    std::optional<int> cadastrar(const Acompanhante &acompanhante)
+    static Acompanhante montar(const pqxx::row &linha)
     {
-        try
-        {
-            db.exigirConexao();
-            pqxx::work transacao(*db.getConexao());
-            pqxx::result res = transacao.exec(
-                "INSERT INTO Acompanhantes (cpf, nome, telefone) VALUES ($1, $2, $3) "
-                "RETURNING id_acompanhante",
-                pqxx::params{acompanhante.cpf, acompanhante.nomeCompleto, acompanhante.telefone});
-            transacao.commit();
-            int id = res[0][0].as<int>();
-            std::cout << "Acompanhante cadastrado com sucesso! ID: " << id << std::endl;
-            return id;
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "Erro ao cadastrar acompanhante: " << e.what() << std::endl;
-            return std::nullopt;
-        }
+        Acompanhante acompanhante;
+        acompanhante.id = linha["id_acompanhante"].as<int>();
+        acompanhante.cpf = linha["cpf"].c_str();
+        acompanhante.nomeCompleto = linha["nome"].c_str();
+        if (!linha["telefone"].is_null())
+            acompanhante.telefone = linha["telefone"].c_str();
+        return acompanhante;
+    }
+
+public:
+    explicit AcompanhanteRepository(Database &database) : db(database) {}
+
+    int cadastrar(const Acompanhante &acompanhante)
+    {
+        db.exigirConexao();
+        pqxx::work transacao(*db.getConexao());
+        const std::optional<std::string> telefone = acompanhante.telefone.empty() ? std::nullopt : std::optional<std::string>{acompanhante.telefone};
+        const pqxx::result resultado = transacao.exec(
+            "INSERT INTO Acompanhantes (cpf, nome, telefone) VALUES ($1, $2, $3) RETURNING id_acompanhante",
+            pqxx::params{acompanhante.cpf, acompanhante.nomeCompleto, telefone});
+        const int id = resultado[0][0].as<int>();
+        transacao.commit();
+        return id;
+    }
+
+    bool atualizar(const Acompanhante &acompanhante)
+    {
+        db.exigirConexao();
+        pqxx::work transacao(*db.getConexao());
+        const std::optional<std::string> telefone = acompanhante.telefone.empty() ? std::nullopt : std::optional<std::string>{acompanhante.telefone};
+        const pqxx::result resultado = transacao.exec(
+            "UPDATE Acompanhantes SET nome = $1, telefone = $2 WHERE id_acompanhante = $3 RETURNING id_acompanhante",
+            pqxx::params{acompanhante.nomeCompleto, telefone, acompanhante.id});
+        transacao.commit();
+        return !resultado.empty();
+    }
+
+    bool deletar(int id)
+    {
+        db.exigirConexao();
+        pqxx::work transacao(*db.getConexao());
+        const pqxx::result resultado = transacao.exec(
+            "DELETE FROM Acompanhantes WHERE id_acompanhante = $1 RETURNING id_acompanhante", pqxx::params{id});
+        transacao.commit();
+        return !resultado.empty();
+    }
+
+    std::optional<Acompanhante> buscarPorCPF(const std::string &cpf)
+    {
+        db.exigirConexao();
+        pqxx::read_transaction transacao(*db.getConexao());
+        const pqxx::result resultado = transacao.exec(
+            "SELECT id_acompanhante, cpf, nome, telefone FROM Acompanhantes WHERE cpf = $1", pqxx::params{cpf});
+        return resultado.empty() ? std::nullopt : std::optional<Acompanhante>{montar(resultado[0])};
     }
 };

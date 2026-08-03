@@ -1,4 +1,6 @@
-build/
-*.exe
-moc_*.cpp
-ui_*.h
+/build/
+/.build-home/
+/.build-tmp/
+/Sistema-Logistica-Prefeitura/
+/.vscode/
+*.user

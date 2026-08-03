@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <algorithm>
+#include <cctype>
 
 // Segue o mesmo padrão do DataUtils.h: uma função utilitária pura,
 // sem estado e sem depender do banco, isolada num namespace próprio.
@@ -14,16 +15,31 @@
 // "inchar" a struct Paciente com lógica que não é dela.
 namespace CpfUtils
 {
-    // Espera uma string com exatamente 11 dígitos numéricos, sem pontuação
-    // (ex.: "11144477735", não "111.444.777-35").
-    inline bool verificar(const std::string &cpf)
+    // Converte o CPF para a representação canônica usada pelo domínio e pelo
+    // banco: somente os 11 dígitos. A pontuação é responsabilidade da UI.
+    inline std::string normalizar(const std::string &cpf)
     {
-        if (cpf.length() != 11)
+        std::string numeros;
+        numeros.reserve(cpf.size());
+
+        for (const unsigned char caractere : cpf)
         {
-            return false;
+            if (std::isdigit(caractere))
+                numeros += static_cast<char>(caractere);
         }
 
-        if (!std::all_of(cpf.begin(), cpf.end(), ::isdigit))
+        return numeros;
+    }
+
+    // Aceita CPF com ou sem pontuação, mas sempre valida os 11 dígitos
+    // normalizados. Ex.: "111.444.777-35" e "11144477735".
+    inline bool verificar(const std::string &cpfInformado)
+    {
+        const std::string cpf = normalizar(cpfInformado);
+
+        if (cpf.length() != 11 ||
+            !std::all_of(cpf.begin(), cpf.end(), [](unsigned char c)
+                         { return std::isdigit(c) != 0; }))
         {
             return false;
         }

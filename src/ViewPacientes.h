@@ -1,8 +1,8 @@
 #pragma once
 
 #include <QWidget>
-#include <QListWidgetItem>
 #include <vector>
+
 #include "Database.h"
 #include "PacienteRepository.h"
 
@@ -27,6 +27,9 @@ public:
     explicit ViewPacientes(Database &db, ModoPaciente modo, QWidget *parent = nullptr);
     ~ViewPacientes();
 
+    // Called whenever this persistent stacked page is reopened.
+    void prepararTela();
+
 signals:
     void voltarSolicitado();
 
@@ -35,7 +38,8 @@ private slots:
     void atualizarPaciente();
     void deletarPaciente();
     void buscarPaciente();
-    void selecionarResultado(QListWidgetItem *item);
+    void selecionarResultado(int linha, int coluna);
+    void limparFormulario();
 
 private:
     Ui::ViewPacientes *ui;
@@ -44,14 +48,17 @@ private:
     PacienteRepository m_repo;
     ModoPaciente m_modo;
 
-    // Guarda os resultados da última busca por nome, pra mapear o item
-    // clicado na lista de volta pro Paciente completo (a lista só mostra
-    // texto, não guarda os dados).
     std::vector<Paciente> m_resultadosBusca;
+    int m_pacienteSelecionadoId = 0;
 
     void configurarMascaras();
     void configurarModo();
     void habilitarCamposEdicao(bool habilitado);
-    void preencherCampos(const Paciente &p);
+    void preencherCampos(const Paciente &paciente);
+    void selecionarPaciente(const Paciente &paciente);
     void limparCamposDados();
+    bool validarDadosPaciente();
+    void exibirMensagemValidacao(const QString &mensagem, QWidget *campo);
+    void limparMensagemValidacao();
+    void mostrarErroBanco(const pqxx::sql_error &erro, const QString &acao);
 };

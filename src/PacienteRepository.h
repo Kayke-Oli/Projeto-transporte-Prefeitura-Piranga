@@ -1,43 +1,73 @@
 #pragma once
-#include "Entidades.h"
+
 #include "Database.h"
-#include <pqxx/pqxx>
-#include <vector>
+#include "Entidades.h"
 #include <optional>
-#include <iostream>
+#include <pqxx/pqxx>
+#include <string>
+#include <vector>
 
 class PacienteRepository
 {
 private:
     Database &db;
 
-public:
-    PacienteRepository(Database &database) : db(database) {}
-
-    void atualizar(const Paciente &paciente)
+    static Paciente montarPaciente(const pqxx::row &linha)
     {
-        db.exigirConexao();
-        pqxx::work transacao(*db.getConexao());
+        Paciente paciente;
+        paciente.id = linha["id_paciente"].as<int>();
+        paciente.cpf = linha["cpf"].c_str();
+        paciente.nomeCompleto = linha["nome"].c_str();
 
-        // Atualiza nome, telefone e endereço buscando pelo CPF
-        transacao.exec(
-            "UPDATE Pacientes SET nome = $1, telefone = $2, endereco = $3 WHERE cpf = $4",
-            pqxx::params{paciente.nomeCompleto, paciente.telefone, paciente.endereco, paciente.cpf});
+        if (!linha["telefone"].is_null())
+            paciente.telefone = linha["telefone"].c_str();
+        if (!linha["endereco"].is_null())
+            paciente.endereco = linha["endereco"].c_str();
 
-        transacao.commit();
+        return paciente;
     }
 
-    void deletar(const std::string &cpf)
+public:
+    explicit PacienteRepository(Database &database) : db(database) {}
+
+    // false means that another session removed the patient after the UI search.
+    // Database failures always propagate to the View.
+    bool atualizar(const Paciente &paciente)
     {
         db.exigirConexao();
         pqxx::work transacao(*db.getConexao());
 
-        // O banco vai disparar erro 23503 aqui se o paciente tiver viagens!
-        transacao.exec(
-            "DELETE FROM Pacientes WHERE cpf = $1",
-            pqxx::params{cpf});
+        const std::optional<std::string> telefone = paciente.telefone.empty()
+                                                         ? std::nullopt
+                                                         : std::optional<std::string>{paciente.telefone};
+        const std::optional<std::string> endereco = paciente.endereco.empty()
+                                                         ? std::nullopt
+                                                         : std::optional<std::string>{paciente.endereco};
+
+        // CPF is an identity field and is intentionally not updated here.
+        // The selected primary key prevents updates to the wrong record.
+        const pqxx::result resultado = transacao.exec(
+            "UPDATE Pacientes SET nome = $1, telefone = $2, endereco = $3 "
+            "WHERE id_paciente = $4 RETURNING id_paciente",
+            pqxx::params{paciente.nomeCompleto, telefone, endereco, paciente.id});
 
         transacao.commit();
+        return !resultado.empty();
+    }
+
+    // false means that another session removed the patient after the UI search.
+    bool deletar(int pacienteId)
+    {
+        db.exigirConexao();
+        pqxx::work transacao(*db.getConexao());
+
+        // PostgreSQL raises 23503 if this patient has linked trips.
+        const pqxx::result resultado = transacao.exec(
+            "DELETE FROM Pacientes WHERE id_paciente = $1 RETURNING id_paciente",
+            pqxx::params{pacienteId});
+
+        transacao.commit();
+        return !resultado.empty();
     }
 
     int cadastrar(const Paciente &paciente)
@@ -45,67 +75,56 @@ public:
         db.exigirConexao();
         pqxx::work transacao(*db.getConexao());
 
-        // O pqxx vai lançar uma exceção automaticamente se violar restrições (como CPF duplicado)
-        pqxx::result res = transacao.exec(
-            "INSERT INTO Pacientes (cpf, nome, telefone, endereco) VALUES ($1, $2, $3, $4) RETURNING id_paciente",
-            pqxx::params{paciente.cpf, paciente.nomeCompleto, paciente.telefone, paciente.endereco});
+        const std::optional<std::string> telefone = paciente.telefone.empty()
+                                                         ? std::nullopt
+                                                         : std::optional<std::string>{paciente.telefone};
+        const std::optional<std::string> endereco = paciente.endereco.empty()
+                                                         ? std::nullopt
+                                                         : std::optional<std::string>{paciente.endereco};
 
+        const pqxx::result resultado = transacao.exec(
+            "INSERT INTO Pacientes (cpf, nome, telefone, endereco) "
+            "VALUES ($1, $2, $3, $4) RETURNING id_paciente",
+            pqxx::params{paciente.cpf, paciente.nomeCompleto, telefone, endereco});
+
+        const int id = resultado[0][0].as<int>();
         transacao.commit();
-
-        int id = res[0][0].as<int>();
-        return id; // Retorna direto o ID gerado, ou lança exceção em caso de falha
+        return id;
     }
 
-    std::optional<Paciente>
-    buscarPorCPF(const std::string &cpf)
+    // nullopt is returned only for a valid query with no row. SQL and
+    // connection exceptions intentionally propagate to the View.
+    std::optional<Paciente> buscarPorCPF(const std::string &cpf)
     {
-        try
-        {
-            db.exigirConexao();
-            pqxx::work transacao(*db.getConexao());
-            pqxx::result res = transacao.exec("SELECT id_paciente, cpf, nome, telefone, endereco FROM Pacientes WHERE cpf = $1", pqxx::params{cpf});
+        db.exigirConexao();
+        pqxx::read_transaction transacao(*db.getConexao());
+        const pqxx::result resultado = transacao.exec(
+            "SELECT id_paciente, cpf, nome, telefone, endereco "
+            "FROM Pacientes WHERE cpf = $1",
+            pqxx::params{cpf});
 
-            if (!res.empty())
-            {
-                Paciente p;
-                p.id = res[0]["id_paciente"].as<int>();
-                p.cpf = res[0]["cpf"].c_str();
-                p.nomeCompleto = res[0]["nome"].c_str();
-                p.telefone = res[0]["telefone"].c_str();
-                p.endereco = res[0]["endereco"].c_str();
-                return p;
-            }
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "Erro ao buscar paciente: " << e.what() << std::endl;
-        }
-        return std::nullopt;
+        if (resultado.empty())
+            return std::nullopt;
+
+        return montarPaciente(resultado[0]);
     }
-    // Busca parcial por nome (case-insensitive). Pode retornar vários
-    // resultados - diferente de buscarPorCPF, que é busca exata e única.
+
     std::vector<Paciente> buscarPorNome(const std::string &nomeParcial)
     {
-        std::vector<Paciente> resultados;
-
         db.exigirConexao();
-        pqxx::work transacao(*db.getConexao());
-        pqxx::result res = transacao.exec(
-            "SELECT id_paciente, cpf, nome, telefone, endereco FROM Pacientes "
-            "WHERE nome ILIKE '%' || $1 || '%' ORDER BY nome LIMIT 20",
+        pqxx::read_transaction transacao(*db.getConexao());
+        const pqxx::result resultado = transacao.exec(
+            "SELECT id_paciente, cpf, nome, telefone, endereco "
+            "FROM Pacientes "
+            "WHERE nome ILIKE '%' || $1 || '%' "
+            "ORDER BY nome, cpf LIMIT 20",
             pqxx::params{nomeParcial});
 
-        for (const auto &linha : res)
-        {
-            Paciente p;
-            p.id = linha["id_paciente"].as<int>();
-            p.cpf = linha["cpf"].c_str();
-            p.nomeCompleto = linha["nome"].c_str();
-            p.telefone = linha["telefone"].c_str();
-            p.endereco = linha["endereco"].c_str();
-            resultados.push_back(p);
-        }
+        std::vector<Paciente> pacientes;
+        pacientes.reserve(resultado.size());
+        for (const auto &linha : resultado)
+            pacientes.push_back(montarPaciente(linha));
 
-        return resultados;
+        return pacientes;
     }
 };

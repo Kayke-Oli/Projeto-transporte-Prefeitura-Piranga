@@ -1,8 +1,70 @@
 #include "ViewPacientes.h"
-#include "ui_ViewPacientes.h"
 #include "CpfUtils.h"
+#include "ui_ViewPacientes.h"
+
+#include <QHeaderView>
 #include <QMessageBox>
-#include <QRegularExpression>
+#include <QSignalBlocker>
+#include <QStringList>
+#include <QTableWidgetItem>
+
+namespace
+{
+    QString somenteDigitos(const QString &texto)
+    {
+        QString numeros;
+        numeros.reserve(texto.size());
+        for (const QChar caractere : texto)
+        {
+            if (caractere.isDigit())
+                numeros += caractere;
+        }
+        return numeros;
+    }
+
+    QString formatarCpf(const QString &texto)
+    {
+        const QString numeros = somenteDigitos(texto).left(11);
+        QString resultado;
+        for (qsizetype i = 0; i < numeros.size(); ++i)
+        {
+            if (i == 3 || i == 6)
+                resultado += ".";
+            else if (i == 9)
+                resultado += "-";
+            resultado += numeros[i];
+        }
+        return resultado;
+    }
+
+    QString formatarTelefone(const QString &texto)
+    {
+        const QString numeros = somenteDigitos(texto).left(11);
+        if (numeros.isEmpty())
+            return {};
+        if (numeros.size() <= 2)
+            return "(" + numeros;
+
+        const QString ddd = numeros.left(2);
+        const QString numero = numeros.mid(2);
+        const int tamanhoPrimeiroBloco = numeros.size() == 11 ? 5 : 4;
+
+        if (numero.size() <= tamanhoPrimeiroBloco)
+            return "(" + ddd + ") " + numero;
+
+        return "(" + ddd + ") " + numero.left(tamanhoPrimeiroBloco) + "-" + numero.mid(tamanhoPrimeiroBloco);
+    }
+
+    QString cpfFormatado(const std::string &cpf)
+    {
+        return formatarCpf(QString::fromStdString(cpf));
+    }
+
+    QString telefoneFormatado(const std::string &telefone)
+    {
+        return formatarTelefone(QString::fromStdString(telefone));
+    }
+}
 
 ViewPacientes::ViewPacientes(Database &db, ModoPaciente modo, QWidget *parent)
     : QWidget(parent), ui(new Ui::ViewPacientes), m_db(db), m_repo(db), m_modo(modo)
@@ -13,16 +75,29 @@ ViewPacientes::ViewPacientes(Database &db, ModoPaciente modo, QWidget *parent)
     connect(ui->btnAtualizar, &QPushButton::clicked, this, &ViewPacientes::atualizarPaciente);
     connect(ui->btnDeletar, &QPushButton::clicked, this, &ViewPacientes::deletarPaciente);
     connect(ui->btnConsultar, &QPushButton::clicked, this, &ViewPacientes::buscarPaciente);
+    connect(ui->btnLimpar, &QPushButton::clicked, this, &ViewPacientes::limparFormulario);
     connect(ui->btnVoltar, &QPushButton::clicked, this, &ViewPacientes::voltarSolicitado);
-    connect(ui->listaResultados, &QListWidget::itemClicked, this, &ViewPacientes::selecionarResultado);
+    connect(ui->tabelaResultados, &QTableWidget::cellClicked, this, &ViewPacientes::selecionarResultado);
+    connect(ui->txtCpf, &QLineEdit::returnPressed, this, [this]
+            {
+                if (m_modo != ModoPaciente::Cadastrar)
+                    buscarPaciente();
+            });
+    connect(ui->txtBuscaNome, &QLineEdit::returnPressed, this, &ViewPacientes::buscarPaciente);
 
     configurarMascaras();
     configurarModo();
+    prepararTela();
 }
 
 ViewPacientes::~ViewPacientes()
 {
     delete ui;
+}
+
+void ViewPacientes::prepararTela()
+{
+    limparFormulario();
 }
 
 void ViewPacientes::configurarModo()
@@ -31,52 +106,66 @@ void ViewPacientes::configurarModo()
     ui->btnAtualizar->setVisible(m_modo == ModoPaciente::Atualizar);
     ui->btnDeletar->setVisible(m_modo == ModoPaciente::Excluir);
 
-    bool temBusca = (m_modo == ModoPaciente::Atualizar || m_modo == ModoPaciente::Consultar);
-    ui->btnConsultar->setVisible(temBusca);
-    if (temBusca)
-        ui->btnConsultar->setText("Buscar");
+    const bool temBuscaPorCpf = m_modo != ModoPaciente::Cadastrar;
+    ui->btnConsultar->setVisible(temBuscaPorCpf);
+    ui->btnConsultar->setText(m_modo == ModoPaciente::Consultar ? "Buscar" : "Buscar por CPF");
+    ui->grupoBuscaNome->setVisible(m_modo == ModoPaciente::Consultar);
 
-    // Excluir só precisa do CPF - o resto do formulário não tem função
-    // nessa tela, então some.
-    bool mostrarDadosCompletos = (m_modo != ModoPaciente::Excluir);
-    ui->label->setVisible(mostrarDadosCompletos);
-    ui->txtNome->setVisible(mostrarDadosCompletos);
-    ui->label_3->setVisible(mostrarDadosCompletos);
-    ui->txtTelefone->setVisible(mostrarDadosCompletos);
-    ui->label_4->setVisible(mostrarDadosCompletos);
-    ui->txtEndereco->setVisible(mostrarDadosCompletos);
+    ui->tabelaResultados->setColumnCount(3);
+    ui->tabelaResultados->setHorizontalHeaderLabels(QStringList{"Nome", "CPF", "Telefone"});
+    ui->tabelaResultados->horizontalHeader()->setStretchLastSection(true);
+    ui->tabelaResultados->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    ui->tabelaResultados->setColumnWidth(1, 125);
+    ui->tabelaResultados->setColumnWidth(2, 135);
 
-    // Busca por nome só existe na Consulta
-    ui->labelBuscaNome->setVisible(m_modo == ModoPaciente::Consultar);
-    ui->txtBuscaNome->setVisible(m_modo == ModoPaciente::Consultar);
-    ui->listaResultados->setVisible(false);
-
-    bool somenteLeitura = (m_modo == ModoPaciente::Consultar);
-    ui->txtNome->setReadOnly(somenteLeitura);
-    ui->txtTelefone->setReadOnly(somenteLeitura);
-    ui->txtEndereco->setReadOnly(somenteLeitura);
-
-    // No modo Atualizar, os campos ficam travados até o usuário buscar o
-    // cadastro existente pelo CPF - evita editar "no vazio" ou achar que
-    // está criando um paciente novo.
-    if (m_modo == ModoPaciente::Atualizar)
-        habilitarCamposEdicao(false);
+    ui->txtNome->setReadOnly(m_modo == ModoPaciente::Consultar || m_modo == ModoPaciente::Excluir);
+    ui->txtTelefone->setReadOnly(m_modo == ModoPaciente::Consultar || m_modo == ModoPaciente::Excluir);
+    ui->txtEndereco->setReadOnly(m_modo == ModoPaciente::Consultar || m_modo == ModoPaciente::Excluir);
 
     switch (m_modo)
     {
     case ModoPaciente::Cadastrar:
-        ui->labelTitulo->setText("Cadastrar Paciente");
+        ui->labelTitulo->setText("Cadastrar paciente");
+        ui->labelInstrucao->setText("Informe os dados do paciente. Nome e CPF são obrigatórios.");
         break;
     case ModoPaciente::Atualizar:
-        ui->labelTitulo->setText("Atualizar Cadastro de Paciente");
+        ui->labelTitulo->setText("Atualizar cadastro de paciente");
+        ui->labelInstrucao->setText("Busque pelo CPF antes de editar. O CPF não é alterado neste fluxo.");
         break;
     case ModoPaciente::Excluir:
-        ui->labelTitulo->setText("Excluir Cadastro de Paciente");
+        ui->labelTitulo->setText("Excluir cadastro de paciente");
+        ui->labelInstrucao->setText("Busque e confira o paciente antes de confirmar a exclusão.");
         break;
     case ModoPaciente::Consultar:
-        ui->labelTitulo->setText("Consultar Cadastro de Paciente");
+        ui->labelTitulo->setText("Consultar cadastro de paciente");
+        ui->labelInstrucao->setText("Busque por CPF ou informe pelo menos três letras do nome.");
         break;
     }
+}
+
+void ViewPacientes::configurarMascaras()
+{
+    connect(ui->txtCpf, &QLineEdit::textChanged, this, [this](const QString &texto)
+            {
+                const QString formatado = formatarCpf(texto);
+                if (ui->txtCpf->text() == formatado)
+                    return;
+
+                const QSignalBlocker bloqueio(ui->txtCpf);
+                ui->txtCpf->setText(formatado);
+                ui->txtCpf->setCursorPosition(formatado.size());
+            });
+
+    connect(ui->txtTelefone, &QLineEdit::textChanged, this, [this](const QString &texto)
+            {
+                const QString formatado = formatarTelefone(texto);
+                if (ui->txtTelefone->text() == formatado)
+                    return;
+
+                const QSignalBlocker bloqueio(ui->txtTelefone);
+                ui->txtTelefone->setText(formatado);
+                ui->txtTelefone->setCursorPosition(formatado.size());
+            });
 }
 
 void ViewPacientes::habilitarCamposEdicao(bool habilitado)
@@ -86,12 +175,41 @@ void ViewPacientes::habilitarCamposEdicao(bool habilitado)
     ui->txtEndereco->setEnabled(habilitado);
 }
 
-void ViewPacientes::preencherCampos(const Paciente &p)
+void ViewPacientes::preencherCampos(const Paciente &paciente)
 {
-    ui->txtCpf->setText(QString::fromStdString(p.cpf));
-    ui->txtNome->setText(QString::fromStdString(p.nomeCompleto));
-    ui->txtTelefone->setText(QString::fromStdString(p.telefone));
-    ui->txtEndereco->setText(QString::fromStdString(p.endereco));
+    ui->txtCpf->setText(cpfFormatado(paciente.cpf));
+    ui->txtNome->setText(QString::fromStdString(paciente.nomeCompleto));
+    ui->txtTelefone->setText(telefoneFormatado(paciente.telefone));
+    ui->txtEndereco->setText(QString::fromStdString(paciente.endereco));
+}
+
+void ViewPacientes::selecionarPaciente(const Paciente &paciente)
+{
+    m_pacienteSelecionadoId = paciente.id;
+    preencherCampos(paciente);
+    ui->tabelaResultados->setVisible(false);
+    ui->txtCpf->setReadOnly(m_modo != ModoPaciente::Cadastrar);
+
+    if (m_modo == ModoPaciente::Atualizar)
+    {
+        habilitarCamposEdicao(true);
+        ui->btnAtualizar->setEnabled(true);
+        ui->txtNome->setFocus();
+        ui->labelMensagem->setStyleSheet("color: #0f5132;");
+        ui->labelMensagem->setText("Cadastro carregado. Revise os dados e confirme a atualização.");
+    }
+    else if (m_modo == ModoPaciente::Excluir)
+    {
+        habilitarCamposEdicao(false);
+        ui->btnDeletar->setEnabled(true);
+        ui->labelMensagem->setStyleSheet("color: #8a1c1c;");
+        ui->labelMensagem->setText("Confira os dados. A exclusão não poderá ser desfeita.");
+    }
+    else if (m_modo == ModoPaciente::Consultar)
+    {
+        ui->labelMensagem->setStyleSheet("color: #0f5132;");
+        ui->labelMensagem->setText("Cadastro encontrado.");
+    }
 }
 
 void ViewPacientes::limparCamposDados()
@@ -101,174 +219,235 @@ void ViewPacientes::limparCamposDados()
     ui->txtEndereco->clear();
 }
 
-void ViewPacientes::configurarMascaras()
+void ViewPacientes::limparFormulario()
 {
-    connect(ui->txtCpf, &QLineEdit::textChanged, this, [this](const QString &texto)
-            {
-        QString numeros = texto;
-        numeros.remove(QRegularExpression("[^\\d]"));
-        if (numeros.length() > 11) numeros = numeros.left(11);
+    m_pacienteSelecionadoId = 0;
+    m_resultadosBusca.clear();
+    ui->tabelaResultados->clearContents();
+    ui->tabelaResultados->setRowCount(0);
+    ui->tabelaResultados->setVisible(false);
+    ui->txtCpf->clear();
+    ui->txtBuscaNome->clear();
+    limparCamposDados();
+    limparMensagemValidacao();
 
-        QString formatado = "";
-        for (int i = 0; i < numeros.length(); ++i) {
-            if (i == 3 || i == 6) formatado += ".";
-            else if (i == 9) formatado += "-";
-            formatado += numeros[i];
-        }
+    ui->txtCpf->setReadOnly(false);
 
-        if (ui->txtCpf->text() != formatado) {
-            ui->txtCpf->blockSignals(true);
-            ui->txtCpf->setText(formatado);
-            ui->txtCpf->blockSignals(false);
-        } });
+    if (m_modo == ModoPaciente::Cadastrar)
+    {
+        habilitarCamposEdicao(true);
+        ui->btnSalvar->setEnabled(true);
+        ui->txtNome->setFocus();
+    }
+    else if (m_modo == ModoPaciente::Atualizar)
+    {
+        habilitarCamposEdicao(false);
+        ui->btnAtualizar->setEnabled(false);
+        ui->txtCpf->setFocus();
+    }
+    else if (m_modo == ModoPaciente::Excluir)
+    {
+        habilitarCamposEdicao(false);
+        ui->btnDeletar->setEnabled(false);
+        ui->txtCpf->setFocus();
+    }
+    else
+    {
+        habilitarCamposEdicao(true);
+        ui->txtNome->setReadOnly(true);
+        ui->txtTelefone->setReadOnly(true);
+        ui->txtEndereco->setReadOnly(true);
+        ui->txtCpf->setFocus();
+    }
+}
 
-    connect(ui->txtTelefone, &QLineEdit::textChanged, this, [this](const QString &texto)
-            {
-        QString numeros = texto;
-        numeros.remove(QRegularExpression("[^\\d]"));
-        if (numeros.length() > 11) numeros = numeros.left(11);
+void ViewPacientes::exibirMensagemValidacao(const QString &mensagem, QWidget *campo)
+{
+    ui->labelMensagem->setStyleSheet("color: #b42318;");
+    ui->labelMensagem->setText(mensagem);
+    if (campo)
+        campo->setFocus();
+}
 
-        QString formatado = "";
-        for (int i = 0; i < numeros.length(); ++i) {
-            if (i == 0) formatado += "(";
-            else if (i == 2) formatado += ") ";
-            else if (i == 7) formatado += "-";
-            formatado += numeros[i];
-        }
+void ViewPacientes::limparMensagemValidacao()
+{
+    ui->labelMensagem->clear();
+    ui->labelMensagem->setStyleSheet("color: #475467;");
+}
 
-        if (ui->txtTelefone->text() != formatado) {
-            ui->txtTelefone->blockSignals(true);
-            ui->txtTelefone->setText(formatado);
-            ui->txtTelefone->blockSignals(false);
-        } });
+bool ViewPacientes::validarDadosPaciente()
+{
+    limparMensagemValidacao();
+
+    if (ui->txtNome->text().trimmed().isEmpty())
+    {
+        exibirMensagemValidacao("Informe o nome completo do paciente.", ui->txtNome);
+        return false;
+    }
+
+    const std::string cpf = CpfUtils::normalizar(ui->txtCpf->text().toStdString());
+    if (!CpfUtils::verificar(cpf))
+    {
+        exibirMensagemValidacao("Informe um CPF válido.", ui->txtCpf);
+        return false;
+    }
+
+    const QString telefone = somenteDigitos(ui->txtTelefone->text());
+    if (!telefone.isEmpty() && telefone.size() != 10 && telefone.size() != 11)
+    {
+        exibirMensagemValidacao("O telefone deve ter DDD e 10 ou 11 dígitos.", ui->txtTelefone);
+        return false;
+    }
+
+    return true;
+}
+
+void ViewPacientes::mostrarErroBanco(const pqxx::sql_error &erro, const QString &acao)
+{
+    const std::string codigo = erro.sqlstate();
+    if (codigo == "23505")
+    {
+        QMessageBox::warning(this, "CPF já cadastrado", "Já existe um paciente cadastrado com este CPF.");
+    }
+    else if (codigo == "23503")
+    {
+        QMessageBox::warning(this, "Operação não permitida",
+                             "Não é possível concluir a operação porque existem viagens vinculadas a este paciente.");
+    }
+    else if (codigo == "23514" || codigo == "22001")
+    {
+        QMessageBox::warning(this, "Dados inválidos",
+                             "Os dados informados não atendem às regras de integridade do cadastro.");
+    }
+    else
+    {
+        QMessageBox::critical(this, "Erro no banco de dados",
+                              QString("Não foi possível %1. Tente novamente ou contate o suporte.").arg(acao));
+    }
 }
 
 void ViewPacientes::buscarPaciente()
 {
-    ui->listaResultados->clear();
-    ui->listaResultados->setVisible(false);
+    limparMensagemValidacao();
     m_resultadosBusca.clear();
+    ui->tabelaResultados->clearContents();
+    ui->tabelaResultados->setRowCount(0);
+    ui->tabelaResultados->setVisible(false);
 
-    QString cpfDigitado = ui->txtCpf->text().trimmed();
-
-    if (!cpfDigitado.isEmpty())
+    try
     {
-        auto pacienteEncontrado = m_repo.buscarPorCPF(cpfDigitado.toStdString());
-
-        if (!pacienteEncontrado.has_value())
+        const QString cpfDigitado = ui->txtCpf->text().trimmed();
+        if (!cpfDigitado.isEmpty())
         {
-            QMessageBox::information(this, "Não encontrado", "Nenhum paciente cadastrado com esse CPF.");
-            limparCamposDados();
-            if (m_modo == ModoPaciente::Atualizar)
-                habilitarCamposEdicao(false);
+            const std::string cpf = CpfUtils::normalizar(cpfDigitado.toStdString());
+            if (!CpfUtils::verificar(cpf))
+            {
+                exibirMensagemValidacao("Informe um CPF válido para realizar a busca.", ui->txtCpf);
+                return;
+            }
+
+            const auto paciente = m_repo.buscarPorCPF(cpf);
+            if (!paciente.has_value())
+            {
+                limparCamposDados();
+                exibirMensagemValidacao("Nenhum paciente foi encontrado com este CPF.", ui->txtCpf);
+                return;
+            }
+
+            selecionarPaciente(*paciente);
             return;
         }
 
-        preencherCampos(pacienteEncontrado.value());
-        if (m_modo == ModoPaciente::Atualizar)
-            habilitarCamposEdicao(true);
-        return;
-    }
+        if (m_modo != ModoPaciente::Consultar)
+        {
+            exibirMensagemValidacao("Informe o CPF do paciente que deseja localizar.", ui->txtCpf);
+            return;
+        }
 
-    // Busca por nome só existe na tela de Consulta
-    if (m_modo != ModoPaciente::Consultar)
+        const QString nomeBuscado = ui->txtBuscaNome->text().trimmed();
+        if (nomeBuscado.size() < 3)
+        {
+            exibirMensagemValidacao("Informe pelo menos três letras do nome para pesquisar.", ui->txtBuscaNome);
+            return;
+        }
+
+        m_resultadosBusca = m_repo.buscarPorNome(nomeBuscado.toStdString());
+        if (m_resultadosBusca.empty())
+        {
+            limparCamposDados();
+            exibirMensagemValidacao("Nenhum paciente foi encontrado com este nome.", ui->txtBuscaNome);
+            return;
+        }
+
+        if (m_resultadosBusca.size() == 1)
+        {
+            selecionarPaciente(m_resultadosBusca.front());
+            return;
+        }
+
+        ui->tabelaResultados->setRowCount(static_cast<int>(m_resultadosBusca.size()));
+        for (int linha = 0; linha < static_cast<int>(m_resultadosBusca.size()); ++linha)
+        {
+            const Paciente &paciente = m_resultadosBusca[linha];
+            auto *itemNome = new QTableWidgetItem(QString::fromStdString(paciente.nomeCompleto));
+            itemNome->setData(Qt::UserRole, paciente.id);
+            ui->tabelaResultados->setItem(linha, 0, itemNome);
+            ui->tabelaResultados->setItem(linha, 1, new QTableWidgetItem(cpfFormatado(paciente.cpf)));
+            ui->tabelaResultados->setItem(linha, 2, new QTableWidgetItem(telefoneFormatado(paciente.telefone)));
+        }
+
+        ui->tabelaResultados->setVisible(true);
+        ui->labelMensagem->setStyleSheet("color: #475467;");
+        ui->labelMensagem->setText(m_resultadosBusca.size() == 20
+                                       ? "Exibindo os 20 primeiros resultados. Refine a busca, se necessário."
+                                       : "Selecione um paciente na tabela para ver o cadastro.");
+    }
+    catch (const pqxx::sql_error &erro)
     {
-        QMessageBox::warning(this, "Atenção", "Informe o CPF do paciente.");
-        return;
+        mostrarErroBanco(erro, "consultar o paciente");
     }
-
-    QString nomeBuscado = ui->txtBuscaNome->text().trimmed();
-
-    if (nomeBuscado.isEmpty())
+    catch (const std::exception &)
     {
-        QMessageBox::warning(this, "Atenção", "Informe o CPF ou o nome do paciente que deseja consultar.");
-        return;
+        QMessageBox::critical(this, "Erro de conexão",
+                              "Não foi possível consultar o banco de dados. Verifique a conexão e tente novamente.");
     }
-
-    auto resultados = m_repo.buscarPorNome(nomeBuscado.toStdString());
-
-    if (resultados.empty())
-    {
-        QMessageBox::information(this, "Não encontrado", "Nenhum paciente encontrado com esse nome.");
-        limparCamposDados();
-        return;
-    }
-
-    if (resultados.size() == 1)
-    {
-        preencherCampos(resultados.front());
-        return;
-    }
-
-    // Mais de um resultado - mostra a lista pra escolher
-    m_resultadosBusca = resultados;
-    for (const auto &p : resultados)
-    {
-        ui->listaResultados->addItem(
-            QString::fromStdString(p.nomeCompleto) + " - " + QString::fromStdString(p.cpf));
-    }
-    ui->listaResultados->setVisible(true);
 }
 
-void ViewPacientes::selecionarResultado(QListWidgetItem *item)
+void ViewPacientes::selecionarResultado(int linha, int)
 {
-    int indice = ui->listaResultados->row(item);
-    if (indice < 0 || indice >= static_cast<int>(m_resultadosBusca.size()))
+    if (linha < 0 || linha >= static_cast<int>(m_resultadosBusca.size()))
         return;
 
-    preencherCampos(m_resultadosBusca[indice]);
-    ui->listaResultados->setVisible(false);
+    selecionarPaciente(m_resultadosBusca[linha]);
 }
 
 void ViewPacientes::salvarPaciente()
 {
-    QString nome = ui->txtNome->text().trimmed();
-    QString cpf = ui->txtCpf->text().trimmed();
-
-    if (nome.isEmpty() || cpf.isEmpty())
-    {
-        QMessageBox::warning(this, "Atenção", "Os campos Nome e CPF são obrigatórios.");
+    if (!validarDadosPaciente())
         return;
-    }
 
+    ui->btnSalvar->setEnabled(false);
     try
     {
-        if (!CpfUtils::verificar(cpf.toStdString()))
-        {
-            QMessageBox::warning(this, "CPF Inválido", "O CPF informado não é válido.");
-            return;
-        }
+        Paciente paciente;
+        paciente.nomeCompleto = ui->txtNome->text().trimmed().toStdString();
+        paciente.cpf = CpfUtils::normalizar(ui->txtCpf->text().toStdString());
+        paciente.telefone = somenteDigitos(ui->txtTelefone->text()).toStdString();
+        paciente.endereco = ui->txtEndereco->text().trimmed().toStdString();
 
-        ui->btnSalvar->setEnabled(false);
-
-        Paciente p;
-        p.nomeCompleto = nome.toStdString();
-        p.cpf = cpf.toStdString();
-        p.telefone = ui->txtTelefone->text().toStdString();
-        p.endereco = ui->txtEndereco->text().toStdString();
-
-        int idGerado = m_repo.cadastrar(p);
-
-        QMessageBox::information(this, "Sucesso", "Paciente cadastrado com sucesso! ID: " + QString::number(idGerado));
-
-        ui->txtNome->clear();
-        ui->txtCpf->clear();
-        ui->txtTelefone->clear();
-        ui->txtEndereco->clear();
+        const int id = m_repo.cadastrar(paciente);
+        prepararTela();
+        ui->labelMensagem->setStyleSheet("color: #0f5132;");
+        ui->labelMensagem->setText("Paciente cadastrado com sucesso. Código: " + QString::number(id) + ".");
     }
-    catch (const pqxx::sql_error &e)
+    catch (const pqxx::sql_error &erro)
     {
-        std::string sqlState = e.sqlstate();
-        if (sqlState == "23505")
-            QMessageBox::warning(this, "Atenção", "Este CPF já está cadastrado.");
-        else if (sqlState == "23503")
-            QMessageBox::warning(this, "Atenção", "Operação negada: existem registros vinculados.");
-        else
-            QMessageBox::critical(this, "Erro no Banco", QString("Erro SQL: ") + e.what());
+        mostrarErroBanco(erro, "cadastrar o paciente");
     }
-    catch (const std::exception &e)
+    catch (const std::exception &)
     {
-        QMessageBox::critical(this, "Erro Crítico", QString("Ocorreu um erro: ") + e.what());
+        QMessageBox::critical(this, "Erro de conexão",
+                              "Não foi possível cadastrar o paciente. Verifique a conexão e tente novamente.");
     }
 
     ui->btnSalvar->setEnabled(true);
@@ -276,89 +455,92 @@ void ViewPacientes::salvarPaciente()
 
 void ViewPacientes::atualizarPaciente()
 {
+    if (m_pacienteSelecionadoId == 0)
+    {
+        exibirMensagemValidacao("Busque um paciente antes de atualizar o cadastro.", ui->txtCpf);
+        return;
+    }
+    if (!validarDadosPaciente())
+        return;
+
+    ui->btnAtualizar->setEnabled(false);
     try
     {
-        QString cpfDigitado = ui->txtCpf->text();
+        Paciente paciente;
+        paciente.id = m_pacienteSelecionadoId;
+        paciente.nomeCompleto = ui->txtNome->text().trimmed().toStdString();
+        paciente.cpf = CpfUtils::normalizar(ui->txtCpf->text().toStdString());
+        paciente.telefone = somenteDigitos(ui->txtTelefone->text()).toStdString();
+        paciente.endereco = ui->txtEndereco->text().trimmed().toStdString();
 
-        if (!CpfUtils::verificar(cpfDigitado.toStdString()))
+        if (!m_repo.atualizar(paciente))
         {
-            QMessageBox::warning(this, "CPF Inválido", "O CPF informado não é válido.");
+            prepararTela();
+            QMessageBox::warning(this, "Cadastro não encontrado",
+                                 "O paciente foi removido por outro atendimento. Faça uma nova busca.");
             return;
         }
 
-        ui->btnAtualizar->setEnabled(false);
-
-        Paciente p;
-        p.nomeCompleto = ui->txtNome->text().toStdString();
-        p.cpf = cpfDigitado.toStdString();
-        p.telefone = ui->txtTelefone->text().toStdString();
-        p.endereco = ui->txtEndereco->text().toStdString();
-
-        m_repo.atualizar(p);
-
-        QMessageBox::information(this, "Sucesso", "Dados do paciente atualizados com sucesso!");
-
-        // Volta a travar os campos - próxima edição exige nova busca,
-        // pra não deixar a tela "aberta pra edição" indefinidamente.
-        habilitarCamposEdicao(false);
+        prepararTela();
+        ui->labelMensagem->setStyleSheet("color: #0f5132;");
+        ui->labelMensagem->setText("Cadastro atualizado com sucesso.");
     }
-    catch (const std::exception &e)
+    catch (const pqxx::sql_error &erro)
     {
-        QMessageBox::critical(this, "Erro Crítico", QString("Erro ao atualizar: ") + e.what());
+        mostrarErroBanco(erro, "atualizar o paciente");
+    }
+    catch (const std::exception &)
+    {
+        QMessageBox::critical(this, "Erro de conexão",
+                              "Não foi possível atualizar o paciente. Verifique a conexão e tente novamente.");
     }
 
-    ui->btnAtualizar->setEnabled(true);
+    if (m_pacienteSelecionadoId != 0)
+        ui->btnAtualizar->setEnabled(true);
 }
 
 void ViewPacientes::deletarPaciente()
 {
-    QString cpfDigitado = ui->txtCpf->text().trimmed();
-
-    if (cpfDigitado.isEmpty())
+    if (m_pacienteSelecionadoId == 0)
     {
-        QMessageBox::warning(this, "Atenção", "Informe o CPF do paciente que deseja excluir.");
+        exibirMensagemValidacao("Busque um paciente antes de solicitar a exclusão.", ui->txtCpf);
         return;
     }
 
-    // Busca antes de excluir - assim a confirmação mostra o nome real,
-    // em vez de pedir pra confirmar "excluir este CPF" às cegas.
-    auto pacienteEncontrado = m_repo.buscarPorCPF(cpfDigitado.toStdString());
-
-    if (!pacienteEncontrado.has_value())
-    {
-        QMessageBox::warning(this, "Não encontrado", "Nenhum paciente cadastrado com esse CPF.");
-        return;
-    }
-
-    QString nomeEncontrado = QString::fromStdString(pacienteEncontrado->nomeCompleto);
-
-    QMessageBox::StandardButton resposta = QMessageBox::question(
-        this, "Confirmar Exclusão",
-        QString("Deseja excluir %1?").arg(nomeEncontrado),
-        QMessageBox::Yes | QMessageBox::No);
+    const QMessageBox::StandardButton resposta = QMessageBox::question(
+        this, "Confirmar exclusão",
+        "Deseja excluir definitivamente o cadastro de " + ui->txtNome->text() + "?\n\n"
+                                                                    "Esta ação não poderá ser desfeita.",
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
 
     if (resposta != QMessageBox::Yes)
         return;
 
+    ui->btnDeletar->setEnabled(false);
     try
     {
-        ui->btnDeletar->setEnabled(false);
-        m_repo.deletar(cpfDigitado.toStdString());
-        QMessageBox::information(this, "Sucesso", "Paciente excluído com sucesso!");
-        ui->txtCpf->clear();
+        if (!m_repo.deletar(m_pacienteSelecionadoId))
+        {
+            prepararTela();
+            QMessageBox::warning(this, "Cadastro não encontrado",
+                                 "O paciente foi removido por outro atendimento. Faça uma nova busca.");
+            return;
+        }
+
+        prepararTela();
+        ui->labelMensagem->setStyleSheet("color: #0f5132;");
+        ui->labelMensagem->setText("Cadastro excluído com sucesso.");
     }
-    catch (const pqxx::sql_error &e)
+    catch (const pqxx::sql_error &erro)
     {
-        std::string sqlState = e.sqlstate();
-        if (sqlState == "23503")
-            QMessageBox::warning(this, "Exclusão Negada", "Não é possível excluir este paciente pois ele possui viagens cadastradas.");
-        else
-            QMessageBox::critical(this, "Erro no Banco", QString("Erro SQL: ") + e.what());
+        mostrarErroBanco(erro, "excluir o paciente");
     }
-    catch (const std::exception &e)
+    catch (const std::exception &)
     {
-        QMessageBox::critical(this, "Erro Crítico", QString("Erro ao excluir: ") + e.what());
+        QMessageBox::critical(this, "Erro de conexão",
+                              "Não foi possível excluir o paciente. Verifique a conexão e tente novamente.");
     }
 
-    ui->btnDeletar->setEnabled(true);
+    if (m_pacienteSelecionadoId != 0)
+        ui->btnDeletar->setEnabled(true);
 }

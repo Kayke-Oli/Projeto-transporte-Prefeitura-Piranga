@@ -1,37 +1,53 @@
 #pragma once
-#include "Entidades.h"
+
 #include "Database.h"
-#include <pqxx/pqxx>
+#include "Entidades.h"
 #include <optional>
-#include <iostream>
+#include <pqxx/pqxx>
+#include <string>
+#include <vector>
 
 class VeiculoRepository
 {
 private:
     Database &db;
+    static Veiculo montar(const pqxx::row &linha)
+    {
+        return Veiculo{linha["id_carro"].as<int>(), linha["placa"].c_str(), linha["modelo"].c_str()};
+    }
 
 public:
-    VeiculoRepository(Database &database) : db(database) {}
-
-    // Retorna o ID gerado (>0) em caso de sucesso, ou std::nullopt em caso de erro.
-    std::optional<int> cadastrar(const Veiculo &veiculo)
+    explicit VeiculoRepository(Database &database) : db(database) {}
+    int cadastrar(const Veiculo &veiculo)
     {
-        try
-        {
-            db.exigirConexao();
-            pqxx::work transacao(*db.getConexao());
-            pqxx::result res = transacao.exec(
-                "INSERT INTO Carros (placa, modelo) VALUES ($1, $2) RETURNING id_carro",
-                pqxx::params{veiculo.placa, veiculo.modelo});
-            transacao.commit();
-            int id = res[0][0].as<int>();
-            std::cout << "Veículo cadastrado com sucesso! ID: " << id << std::endl;
-            return id;
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "Erro ao cadastrar veículo: " << e.what() << std::endl;
-            return std::nullopt;
-        }
+        db.exigirConexao(); pqxx::work transacao(*db.getConexao());
+        const pqxx::result resultado = transacao.exec("INSERT INTO Carros (placa, modelo) VALUES ($1, $2) RETURNING id_carro", pqxx::params{veiculo.placa, veiculo.modelo});
+        const int id = resultado[0][0].as<int>(); transacao.commit(); return id;
+    }
+    bool atualizar(const Veiculo &veiculo)
+    {
+        db.exigirConexao(); pqxx::work transacao(*db.getConexao());
+        const pqxx::result resultado = transacao.exec("UPDATE Carros SET modelo = $1 WHERE id_carro = $2 RETURNING id_carro", pqxx::params{veiculo.modelo, veiculo.id});
+        transacao.commit(); return !resultado.empty();
+    }
+    bool deletar(int id)
+    {
+        db.exigirConexao(); pqxx::work transacao(*db.getConexao());
+        const pqxx::result resultado = transacao.exec("DELETE FROM Carros WHERE id_carro = $1 RETURNING id_carro", pqxx::params{id});
+        transacao.commit(); return !resultado.empty();
+    }
+    std::optional<Veiculo> buscarPorPlaca(const std::string &placa)
+    {
+        db.exigirConexao(); pqxx::read_transaction transacao(*db.getConexao());
+        const pqxx::result resultado = transacao.exec("SELECT id_carro, placa, modelo FROM Carros WHERE placa = $1", pqxx::params{placa});
+        return resultado.empty() ? std::nullopt : std::optional<Veiculo>{montar(resultado[0])};
+    }
+    std::vector<Veiculo> listarTodos()
+    {
+        db.exigirConexao(); pqxx::read_transaction transacao(*db.getConexao());
+        const pqxx::result resultado = transacao.exec("SELECT id_carro, placa, modelo FROM Carros ORDER BY placa");
+        std::vector<Veiculo> itens; itens.reserve(resultado.size());
+        for (const auto &linha : resultado) itens.push_back(montar(linha));
+        return itens;
     }
 };

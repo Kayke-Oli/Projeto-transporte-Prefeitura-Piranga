@@ -52,6 +52,34 @@ struct Viagem
     std::vector<PassageiroDaViagem> passageiros;
 };
 
+// Projeções de leitura para a tela de viagens. Mantêm os DTOs de domínio
+// simples e evitam expor pqxx para a interface.
+struct PassageiroViagemDetalhe
+{
+    PassageiroDaViagem relacao;
+    std::string pacienteNome;
+    std::string pacienteCpf;
+    std::optional<std::string> acompanhanteNome;
+    std::optional<std::string> acompanhanteCpf;
+};
+
+struct ViagemDetalhe
+{
+    Viagem viagem;
+    std::vector<PassageiroViagemDetalhe> passageiros;
+};
+
+struct ViagemResumo
+{
+    int id = 0;
+    std::string dataViagem;
+    std::string cidadeDestino;
+    std::string veiculoPlaca;
+    std::string motoristaNome;
+    int totalPacientes = 0;
+    int totalAcompanhantes = 0;
+};
+
 // DTOs específicos para os relatórios (evitam misturar entidade de domínio com projeção de query)
 struct HistoricoPacienteItem
 {

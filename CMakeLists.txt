@@ -3,6 +3,7 @@ project(SistemaPrefeitura LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # As três mágicas: geram moc, uic e rcc automaticamente pra qualquer
 # arquivo que precise (Q_OBJECT -> moc, .ui incluído -> uic, .qrc -> rcc)
@@ -41,8 +42,14 @@ add_executable(sistema_prefeitura
     src/ViewPacientes.cpp
     src/ViewInicio.cpp
     src/ViewPacientesMenu.cpp
+    src/ViewCadastros.cpp
+    src/ViewViagens.cpp
+    src/ViewRelatorios.cpp
     src/ViagemRepository.cpp
     src/ViewPacientes.ui
+    src/ViewCadastros.ui
+    src/ViewViagens.ui
+    src/ViewRelatorios.ui
 )
 
 target_include_directories(sistema_prefeitura PRIVATE
@@ -55,3 +62,23 @@ target_link_libraries(sistema_prefeitura PRIVATE
     ${PQXX_LIBRARY}
     ${PQ_LIBRARY}
 )
+
+if(MSVC)
+    target_compile_options(sistema_prefeitura PRIVATE /W4 /permissive-)
+else()
+    target_compile_options(sistema_prefeitura PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(core_utils_tests
+        tests/CoreUtilsTests.cpp
+    )
+    target_include_directories(core_utils_tests PRIVATE src)
+    if(MSVC)
+        target_compile_options(core_utils_tests PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(core_utils_tests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    add_test(NAME core_utils_tests COMMAND core_utils_tests)
+endif()

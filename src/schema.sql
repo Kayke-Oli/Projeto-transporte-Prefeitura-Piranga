@@ -7,35 +7,77 @@
 --   psql -d prefeitura_viagens -f schema.sql
 -- =====================================================================
 
+-- Valida CPF já normalizado (somente 11 dígitos), incluindo os dois
+-- dígitos verificadores. A UI faz a mesma validação para dar retorno rápido,
+-- mas esta função garante a regra mesmo para acessos externos ao sistema.
+CREATE OR REPLACE FUNCTION cpf_valido(cpf_texto TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+IMMUTABLE
+STRICT
+AS $$
+DECLARE
+    soma INTEGER;
+    resto INTEGER;
+    digito_esperado INTEGER;
+    posicao INTEGER;
+BEGIN
+    IF cpf_texto !~ '^[0-9]{11}$'
+       OR cpf_texto = repeat(substr(cpf_texto, 1, 1), 11) THEN
+        RETURN FALSE;
+    END IF;
+
+    soma := 0;
+    FOR posicao IN 1..9 LOOP
+        soma := soma + substr(cpf_texto, posicao, 1)::INTEGER * (11 - posicao);
+    END LOOP;
+    resto := soma % 11;
+    digito_esperado := CASE WHEN resto < 2 THEN 0 ELSE 11 - resto END;
+    IF substr(cpf_texto, 10, 1)::INTEGER <> digito_esperado THEN
+        RETURN FALSE;
+    END IF;
+
+    soma := 0;
+    FOR posicao IN 1..10 LOOP
+        soma := soma + substr(cpf_texto, posicao, 1)::INTEGER * (12 - posicao);
+    END LOOP;
+    resto := soma % 11;
+    digito_esperado := CASE WHEN resto < 2 THEN 0 ELSE 11 - resto END;
+
+    RETURN substr(cpf_texto, 11, 1)::INTEGER = digito_esperado;
+END;
+$$;
+
 -- Tabela: Pacientes
 CREATE TABLE Pacientes (
     id_paciente SERIAL PRIMARY KEY,
-    cpf         VARCHAR(14)  NOT NULL UNIQUE,
-    nome        VARCHAR(150) NOT NULL,
-    telefone    VARCHAR(20),
-    endereco    VARCHAR(255)
+    cpf         CHAR(11)     NOT NULL UNIQUE,
+    nome        VARCHAR(150) NOT NULL CHECK (btrim(nome) <> ''),
+    telefone    VARCHAR(11)  CHECK (telefone IS NULL OR telefone ~ '^[0-9]{10,11}$'),
+    endereco    VARCHAR(255) CHECK (endereco IS NULL OR btrim(endereco) <> ''),
+    CONSTRAINT ck_pacientes_cpf_valido CHECK (cpf_valido(cpf))
 );
 
 -- Tabela: Acompanhantes
 CREATE TABLE Acompanhantes (
     id_acompanhante SERIAL PRIMARY KEY,
-    cpf             VARCHAR(14)  NOT NULL UNIQUE,
-    nome            VARCHAR(150) NOT NULL,
-    telefone        VARCHAR(20)
+    cpf             CHAR(11)     NOT NULL UNIQUE CHECK (cpf_valido(cpf)),
+    nome            VARCHAR(150) NOT NULL CHECK (btrim(nome) <> ''),
+    telefone        VARCHAR(11)  CHECK (telefone IS NULL OR telefone ~ '^[0-9]{10,11}$')
 );
 
 -- Tabela: Motoristas
 CREATE TABLE Motoristas (
     id_motorista SERIAL PRIMARY KEY,
-    nome         VARCHAR(150) NOT NULL,
-    cpf          VARCHAR(14)  NOT NULL UNIQUE
+    nome         VARCHAR(150) NOT NULL CHECK (btrim(nome) <> ''),
+    cpf          CHAR(11)     NOT NULL UNIQUE CHECK (cpf_valido(cpf))
 );
 
 -- Tabela: Carros
 CREATE TABLE Carros (
     id_carro SERIAL PRIMARY KEY,
-    placa    VARCHAR(8)  NOT NULL UNIQUE, -- comporta placa antiga (AAA-9999) e Mercosul (AAA9A99)
-    modelo   VARCHAR(100) NOT NULL
+    placa    VARCHAR(7)  NOT NULL UNIQUE CHECK (placa ~ '^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$'),
+    modelo   VARCHAR(100) NOT NULL CHECK (btrim(modelo) <> '')
 );
 
 -- Tabela: Viagens
@@ -49,7 +91,7 @@ CREATE TABLE Carros (
 CREATE TABLE Viagens (
     id_viagem      SERIAL PRIMARY KEY,
     data_viagem    DATE         NOT NULL,
-    cidade_destino VARCHAR(100) NOT NULL,
+    cidade_destino VARCHAR(100) NOT NULL CHECK (btrim(cidade_destino) <> ''),
     id_carro       INTEGER NOT NULL REFERENCES Carros(id_carro)       ON DELETE RESTRICT,
     id_motorista   INTEGER NOT NULL REFERENCES Motoristas(id_motorista) ON DELETE RESTRICT
 );
