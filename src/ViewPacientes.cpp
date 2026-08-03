@@ -81,8 +81,7 @@ ViewPacientes::ViewPacientes(Database &db, ModoPaciente modo, QWidget *parent)
     connect(ui->txtCpf, &QLineEdit::returnPressed, this, [this]
             {
                 if (m_modo != ModoPaciente::Cadastrar)
-                    buscarPaciente();
-            });
+                    buscarPaciente(); });
     connect(ui->txtBuscaNome, &QLineEdit::returnPressed, this, &ViewPacientes::buscarPaciente);
 
     configurarMascaras();
@@ -153,8 +152,7 @@ void ViewPacientes::configurarMascaras()
 
                 const QSignalBlocker bloqueio(ui->txtCpf);
                 ui->txtCpf->setText(formatado);
-                ui->txtCpf->setCursorPosition(formatado.size());
-            });
+                ui->txtCpf->setCursorPosition(formatado.size()); });
 
     connect(ui->txtTelefone, &QLineEdit::textChanged, this, [this](const QString &texto)
             {
@@ -164,8 +162,7 @@ void ViewPacientes::configurarMascaras()
 
                 const QSignalBlocker bloqueio(ui->txtTelefone);
                 ui->txtTelefone->setText(formatado);
-                ui->txtTelefone->setCursorPosition(formatado.size());
-            });
+                ui->txtTelefone->setCursorPosition(formatado.size()); });
 }
 
 void ViewPacientes::habilitarCamposEdicao(bool habilitado)
@@ -510,7 +507,7 @@ void ViewPacientes::deletarPaciente()
     const QMessageBox::StandardButton resposta = QMessageBox::question(
         this, "Confirmar exclusão",
         "Deseja excluir definitivamente o cadastro de " + ui->txtNome->text() + "?\n\n"
-                                                                    "Esta ação não poderá ser desfeita.",
+                                                                                "Esta ação não poderá ser desfeita.",
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
 
     if (resposta != QMessageBox::Yes)

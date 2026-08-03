@@ -5,7 +5,10 @@
 #include "Motoristarepository.h"
 #include "VeiculoRepository.h"
 
-namespace Ui { class ViewCadastros; }
+namespace Ui
+{
+    class ViewCadastros;
+}
 
 class ViewCadastros : public QWidget
 {
@@ -17,7 +20,13 @@ public:
 signals:
     void voltarSolicitado();
 private slots:
-    void mudarTipo(); void buscar(); void salvar(); void atualizar(); void excluirCadastro(); void limpar();
+    void mudarTipo();
+    void buscar();
+    void salvar();
+    void atualizar();
+    void excluirCadastro();
+    void limpar();
+
 private:
     Ui::ViewCadastros *ui;
     AcompanhanteRepository acompanhantes;

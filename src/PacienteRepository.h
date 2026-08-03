@@ -30,22 +30,18 @@ private:
 public:
     explicit PacienteRepository(Database &database) : db(database) {}
 
-    // false means that another session removed the patient after the UI search.
-    // Database failures always propagate to the View.
     bool atualizar(const Paciente &paciente)
     {
         db.exigirConexao();
         pqxx::work transacao(*db.getConexao());
 
         const std::optional<std::string> telefone = paciente.telefone.empty()
-                                                         ? std::nullopt
-                                                         : std::optional<std::string>{paciente.telefone};
+                                                        ? std::nullopt
+                                                        : std::optional<std::string>{paciente.telefone};
         const std::optional<std::string> endereco = paciente.endereco.empty()
-                                                         ? std::nullopt
-                                                         : std::optional<std::string>{paciente.endereco};
+                                                        ? std::nullopt
+                                                        : std::optional<std::string>{paciente.endereco};
 
-        // CPF is an identity field and is intentionally not updated here.
-        // The selected primary key prevents updates to the wrong record.
         const pqxx::result resultado = transacao.exec(
             "UPDATE Pacientes SET nome = $1, telefone = $2, endereco = $3 "
             "WHERE id_paciente = $4 RETURNING id_paciente",
@@ -55,13 +51,11 @@ public:
         return !resultado.empty();
     }
 
-    // false means that another session removed the patient after the UI search.
     bool deletar(int pacienteId)
     {
         db.exigirConexao();
         pqxx::work transacao(*db.getConexao());
 
-        // PostgreSQL raises 23503 if this patient has linked trips.
         const pqxx::result resultado = transacao.exec(
             "DELETE FROM Pacientes WHERE id_paciente = $1 RETURNING id_paciente",
             pqxx::params{pacienteId});
@@ -76,11 +70,11 @@ public:
         pqxx::work transacao(*db.getConexao());
 
         const std::optional<std::string> telefone = paciente.telefone.empty()
-                                                         ? std::nullopt
-                                                         : std::optional<std::string>{paciente.telefone};
+                                                        ? std::nullopt
+                                                        : std::optional<std::string>{paciente.telefone};
         const std::optional<std::string> endereco = paciente.endereco.empty()
-                                                         ? std::nullopt
-                                                         : std::optional<std::string>{paciente.endereco};
+                                                        ? std::nullopt
+                                                        : std::optional<std::string>{paciente.endereco};
 
         const pqxx::result resultado = transacao.exec(
             "INSERT INTO Pacientes (cpf, nome, telefone, endereco) "
@@ -92,8 +86,6 @@ public:
         return id;
     }
 
-    // nullopt is returned only for a valid query with no row. SQL and
-    // connection exceptions intentionally propagate to the View.
     std::optional<Paciente> buscarPorCPF(const std::string &cpf)
     {
         db.exigirConexao();

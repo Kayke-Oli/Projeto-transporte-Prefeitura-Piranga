@@ -102,7 +102,7 @@ void ViewRelatorios::historico()
         }
         ui->lblMensagem->setStyleSheet("color:#0f5132;");
         ui->lblMensagem->setText(itens.empty() ? "Nenhuma viagem encontrada para este paciente."
-                                                : QString::number(itens.size()) + " viagem(ns) encontrada(s).");
+                                               : QString::number(itens.size()) + " viagem(ns) encontrada(s).");
     }
     catch (const pqxx::sql_error &erroBanco)
     {

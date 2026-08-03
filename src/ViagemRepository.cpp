@@ -184,7 +184,8 @@ std::vector<HistoricoPacienteItem> ViagemRepository::gerarRelatorioHistoricoPaci
         item.motorista = linha["motorista"].c_str();
         item.veiculoModelo = linha["veiculo_modelo"].c_str();
         item.veiculoPlaca = linha["veiculo_placa"].c_str();
-        if (!linha["acompanhante"].is_null()) item.acompanhante = std::string(linha["acompanhante"].c_str());
+        if (!linha["acompanhante"].is_null())
+            item.acompanhante = std::string(linha["acompanhante"].c_str());
         itens.push_back(item);
     }
     return itens;
@@ -239,8 +240,10 @@ std::vector<MapaViagemItem> ViagemRepository::gerarMapaViagemDiario(const std::s
         }
         MapaViagemPassageiro passageiro;
         passageiro.pacienteNome = linha["paciente"].c_str();
-        if (!linha["paciente_telefone"].is_null()) passageiro.pacienteTelefone = std::string(linha["paciente_telefone"].c_str());
-        if (!linha["acompanhante"].is_null()) passageiro.acompanhanteNome = std::string(linha["acompanhante"].c_str());
+        if (!linha["paciente_telefone"].is_null())
+            passageiro.pacienteTelefone = std::string(linha["paciente_telefone"].c_str());
+        if (!linha["acompanhante"].is_null())
+            passageiro.acompanhanteNome = std::string(linha["acompanhante"].c_str());
         mapa.back().passageiros.push_back(passageiro);
     }
     return mapa;

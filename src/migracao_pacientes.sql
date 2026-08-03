@@ -1,7 +1,3 @@
--- Migração para uma base já criada com a versão anterior de schema.sql.
--- Faça backup antes de executar. A migração é transacional: se encontrar
--- dados inválidos ou CPFs que se tornariam duplicados, nada é alterado.
-
 BEGIN;
 
 CREATE OR REPLACE FUNCTION cpf_valido(cpf_texto TEXT)

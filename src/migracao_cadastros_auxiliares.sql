@@ -1,6 +1,4 @@
--- Execute após migracao_pacientes.sql para aplicar as regras novas aos
--- cadastros auxiliares de uma base existente. A transação aborta sem alterar
--- nada se encontrar dados que precisam de correção manual.
+
 BEGIN;
 LOCK TABLE Acompanhantes, Motoristas, Carros IN ACCESS EXCLUSIVE MODE;
 

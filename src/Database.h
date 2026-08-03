@@ -47,7 +47,8 @@ private:
 
     static std::string montarConnStringDoAmbiente()
     {
-        const auto getEnvOrDefault = [](const char *nome, const std::string &padrao) {
+        const auto getEnvOrDefault = [](const char *nome, const std::string &padrao)
+        {
             const char *valor = std::getenv(nome);
             return valor != nullptr ? std::string(valor) : padrao;
         };
