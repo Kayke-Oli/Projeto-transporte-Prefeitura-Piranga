@@ -1,10 +1,12 @@
 #include "ViewRelatorios.h"
 
 #include "CpfUtils.h"
+#include "ReportExporter.h"
 #include "ui_ViewRelatorios.h"
 
 #include <QAbstractItemView>
 #include <QHeaderView>
+#include <QFileDialog>
 #include <QMessageBox>
 #include <QTableWidgetItem>
 
@@ -18,6 +20,16 @@ ViewRelatorios::ViewRelatorios(Database &db, QWidget *parent)
     connect(ui->btnHistorico, &QPushButton::clicked, this, &ViewRelatorios::historico);
     connect(ui->btnVolume, &QPushButton::clicked, this, &ViewRelatorios::volume);
     connect(ui->btnMapa, &QPushButton::clicked, this, &ViewRelatorios::mapa);
+    connect(ui->dtRelatorioViagem, &QDateEdit::dateChanged, this, [this]
+            { carregarViagensRelatorio(); });
+    connect(ui->btnExportarPlanilhaViagem, &QPushButton::clicked, this, &ViewRelatorios::exportarPlanilhaViagem);
+    connect(ui->btnGerarPdfViagem, &QPushButton::clicked, this, &ViewRelatorios::gerarPdfViagem);
+    connect(ui->cmbDestinoRelatorio, qOverload<int>(&QComboBox::currentIndexChanged), this, [this]
+            {
+                const bool selecionada = viagemRelatorioSelecionada() > 0;
+                ui->btnExportarPlanilhaViagem->setEnabled(selecionada);
+                ui->btnGerarPdfViagem->setEnabled(selecionada);
+            });
     connect(ui->txtCpfHistorico, &QLineEdit::returnPressed, this, &ViewRelatorios::historico);
 
     prepararTela();
@@ -46,6 +58,7 @@ void ViewRelatorios::prepararTela()
     ui->dtInicio->setDate(QDate::currentDate().addMonths(-1));
     ui->dtFim->setDate(QDate::currentDate());
     ui->dtMapa->setDate(QDate::currentDate());
+    ui->dtRelatorioViagem->setDate(QDate::currentDate());
     ui->txtCpfHistorico->clear();
     ui->tblHistorico->clearContents();
     ui->tblHistorico->setRowCount(0);
@@ -54,12 +67,142 @@ void ViewRelatorios::prepararTela()
     ui->lblPessoas->setText("0");
     ui->txtMapa->clear();
     ui->lblMensagem->clear();
+    carregarViagensRelatorio();
+}
+
+void ViewRelatorios::mensagem(const QString &texto)
+{
+    ui->lblMensagem->setStyleSheet("color:#0f5132;");
+    ui->lblMensagem->setText(texto);
 }
 
 void ViewRelatorios::erro(const QString &texto)
 {
     ui->lblMensagem->setStyleSheet("color:#b42318;");
     ui->lblMensagem->setText(texto);
+}
+
+int ViewRelatorios::viagemRelatorioSelecionada() const
+{
+    return ui->cmbDestinoRelatorio->currentData().toInt();
+}
+
+void ViewRelatorios::carregarViagensRelatorio()
+{
+    ui->cmbDestinoRelatorio->clear();
+    ui->cmbDestinoRelatorio->addItem("Selecione o destino", 0);
+    ui->btnExportarPlanilhaViagem->setEnabled(false);
+    ui->btnGerarPdfViagem->setEnabled(false);
+
+    try
+    {
+        const auto viagens = repo.listarPorData(ui->dtRelatorioViagem->date().toString("dd-MM-yyyy").toStdString());
+        for (const auto &viagem : viagens)
+        {
+            const QString descricao = QString::fromStdString(viagem.cidadeDestino) + " - " +
+                                      QString::fromStdString(viagem.veiculoPlaca) + " (viagem " +
+                                      QString::number(viagem.id) + ")";
+            ui->cmbDestinoRelatorio->addItem(descricao, viagem.id);
+        }
+        mensagem(viagens.empty() ? "Nenhuma viagem encontrada para a data selecionada."
+                                  : "Selecione o destino da viagem para exportar o relatorio.");
+    }
+    catch (const pqxx::sql_error &erroBanco)
+    {
+        erroSql(erroBanco, "carregar os destinos para relatorio");
+    }
+    catch (const std::exception &)
+    {
+        erro("Nao foi possivel carregar os destinos. Verifique a conexao com o banco.");
+    }
+}
+
+void ViewRelatorios::exportarPlanilhaViagem()
+{
+    const int viagemId = viagemRelatorioSelecionada();
+    if (viagemId <= 0)
+    {
+        erro("Selecione o destino da viagem antes de exportar.");
+        return;
+    }
+
+    try
+    {
+        const auto relatorio = repo.gerarRelatorioViagem(viagemId);
+        if (!relatorio.has_value())
+        {
+            erro("A viagem selecionada nao foi encontrada.");
+            return;
+        }
+
+        QString caminho = QFileDialog::getSaveFileName(
+            this, "Salvar planilha da viagem", "relatorio_viagem_" + QString::number(viagemId) + ".csv",
+            "Planilha CSV (*.csv)");
+        if (caminho.isEmpty())
+            return;
+        if (!caminho.endsWith(".csv", Qt::CaseInsensitive))
+            caminho += ".csv";
+
+        QString motivo;
+        if (!ReportExporter::exportarCsv(*relatorio, caminho, &motivo))
+        {
+            erro(motivo);
+            return;
+        }
+        mensagem("Planilha exportada com sucesso.");
+    }
+    catch (const pqxx::sql_error &erroBanco)
+    {
+        erroSql(erroBanco, "exportar a planilha");
+    }
+    catch (const std::exception &)
+    {
+        erro("Nao foi possivel exportar a planilha. Verifique a conexao com o banco.");
+    }
+}
+
+void ViewRelatorios::gerarPdfViagem()
+{
+    const int viagemId = viagemRelatorioSelecionada();
+    if (viagemId <= 0)
+    {
+        erro("Selecione o destino da viagem antes de gerar o PDF.");
+        return;
+    }
+
+    try
+    {
+        const auto relatorio = repo.gerarRelatorioViagem(viagemId);
+        if (!relatorio.has_value())
+        {
+            erro("A viagem selecionada nao foi encontrada.");
+            return;
+        }
+
+        QString caminho = QFileDialog::getSaveFileName(
+            this, "Salvar relatorio em PDF", "relatorio_viagem_" + QString::number(viagemId) + ".pdf",
+            "Documento PDF (*.pdf)");
+        if (caminho.isEmpty())
+            return;
+        if (!caminho.endsWith(".pdf", Qt::CaseInsensitive))
+            caminho += ".pdf";
+
+        QString motivo;
+        if (!ReportExporter::exportarPdf(*relatorio, caminho, &motivo))
+        {
+            erro(motivo);
+            return;
+        }
+        mensagem("PDF gerado com sucesso.");
+    }
+    catch (const pqxx::sql_error &erroBanco)
+    {
+        erroSql(erroBanco, "gerar o PDF");
+    }
+    catch (const std::exception &)
+    {
+        erro("Nao foi possivel gerar o PDF. Verifique a conexao com o banco.");
+    }
 }
 
 void ViewRelatorios::erroSql(const pqxx::sql_error &erroBanco, const QString &acao)

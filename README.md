@@ -91,6 +91,18 @@ createdb prefeitura_viagens
 psql -d prefeitura_viagens -f src/schema.sql
 ```
 
+### Atualizar um banco existente
+
+Para preservar os dados ja cadastrados, aplique as migracoes abaixo uma unica vez:
+
+```powershell
+psql -d prefeitura_viagens -f src/migracao_auxiliares_relatorios.sql
+psql -d prefeitura_viagens -f src/migracao_acompanhantes_por_viagem.sql
+psql -d prefeitura_viagens -f src/migracao_paciente_uma_viagem_por_dia.sql
+```
+
+Os novos acompanhantes sao informados ao adicionar o paciente a viagem. Nao e necessario cadastra-los previamente.
+
 ### Configurar a conexão
 
 Defina as variáveis no mesmo terminal que executará o aplicativo:

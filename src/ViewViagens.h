@@ -1,6 +1,7 @@
 #pragma once
 #include <QWidget>
 #include "AcompanhanteRepository.h"
+#include "AuxiliarRepository.h"
 #include "Motoristarepository.h"
 #include "PacienteRepository.h"
 #include "VeiculoRepository.h"
@@ -29,20 +30,28 @@ private slots:
     void carregarSelecionada(int, int);
     void excluirViagem();
     void limpar();
+    void exportarPlanilha();
+    void gerarPdf();
 
 private:
     Ui::ViewViagens *ui;
     PacienteRepository pacientes;
     AcompanhanteRepository acompanhantes;
+    AuxiliarRepository auxiliares;
     MotoristaRepository motoristas;
     VeiculoRepository veiculos;
     ViagemRepository viagens;
     std::optional<Paciente> pacientePendente;
     std::optional<Acompanhante> acompanhantePendente;
+    std::optional<Paciente> acompanhantePacientePendente;
+    std::optional<AcompanhanteAvulso> acompanhanteAvulsoPendente;
     std::vector<PassageiroViagemDetalhe> passageiros;
     int viagemId = 0;
     void configurarTabelas();
+    void configurarMascaras();
     void desenharPassageiros();
+    void atualizarCamposAcompanhante(bool habilitado);
+    bool prepararAcompanhante();
     Viagem montarViagem() const;
     void mensagem(const QString &);
     void erro(const QString &);

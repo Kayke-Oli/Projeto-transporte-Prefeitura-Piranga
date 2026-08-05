@@ -26,6 +26,7 @@ public:
     bool deletarViagem(int idViagem);
     std::optional<ViagemDetalhe> buscarPorId(int idViagem);
     std::vector<ViagemResumo> listarPorData(const std::string &dataViagem);
+    std::optional<RelatorioViagem> gerarRelatorioViagem(int idViagem);
 
     std::vector<HistoricoPacienteItem> gerarRelatorioHistoricoPaciente(const std::string &cpfPaciente);
     VolumePassageirosResultado gerarRelatorioVolumePassageiros(const std::string &dataInicio, const std::string &dataFim);

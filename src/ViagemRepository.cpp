@@ -16,6 +16,20 @@ namespace
         std::set<int> pacientes;
         for (const auto &passageiro : viagem.passageiros)
         {
+            if (passageiro.acompanhantePacienteId.has_value() && passageiro.acompanhantePacienteId.value() <= 0)
+                throw RegraNegocioException("Acompanhante de paciente inválido na viagem.");
+            if (passageiro.acompanhanteId.has_value() && passageiro.acompanhantePacienteId.has_value())
+                throw RegraNegocioException("Cada paciente pode ter somente um acompanhante.");
+            if (passageiro.acompanhanteAvulso.has_value())
+            {
+                const auto &acompanhante = *passageiro.acompanhanteAvulso;
+                if (passageiro.acompanhanteId.has_value() || passageiro.acompanhantePacienteId.has_value())
+                    throw RegraNegocioException("Cada paciente pode ter somente um acompanhante.");
+                if (acompanhante.nomeCompleto.empty() || acompanhante.cpf.empty() || acompanhante.telefone.empty())
+                    throw RegraNegocioException("Informe nome, CPF e telefone do acompanhante.");
+            }
+            if (passageiro.acompanhantePacienteId.has_value() && passageiro.acompanhantePacienteId.value() == passageiro.pacienteId)
+                throw RegraNegocioException("O paciente não pode ser seu próprio acompanhante.");
             if (passageiro.pacienteId <= 0)
                 throw RegraNegocioException("Há um paciente inválido na viagem.");
             if (!pacientes.insert(passageiro.pacienteId).second)
@@ -29,9 +43,20 @@ namespace
     {
         for (const auto &passageiro : passageiros)
         {
+            const std::optional<std::string> acompanhanteNome = passageiro.acompanhanteAvulso.has_value()
+                                                                      ? std::optional<std::string>(passageiro.acompanhanteAvulso->nomeCompleto)
+                                                                      : std::nullopt;
+            const std::optional<std::string> acompanhanteCpf = passageiro.acompanhanteAvulso.has_value()
+                                                                     ? std::optional<std::string>(passageiro.acompanhanteAvulso->cpf)
+                                                                     : std::nullopt;
+            const std::optional<std::string> acompanhanteTelefone = passageiro.acompanhanteAvulso.has_value()
+                                                                          ? std::optional<std::string>(passageiro.acompanhanteAvulso->telefone)
+                                                                          : std::nullopt;
             transacao.exec(
-                "INSERT INTO Viagem_Pacientes (id_viagem, id_paciente, id_acompanhante) VALUES ($1, $2, $3)",
-                pqxx::params{idViagem, passageiro.pacienteId, passageiro.acompanhanteId});
+                "INSERT INTO Viagem_Pacientes (id_viagem, id_paciente, id_acompanhante, id_acompanhante_paciente, "
+                "acompanhante_nome, acompanhante_cpf, acompanhante_telefone) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+                pqxx::params{idViagem, passageiro.pacienteId, passageiro.acompanhanteId, passageiro.acompanhantePacienteId,
+                             acompanhanteNome, acompanhanteCpf, acompanhanteTelefone});
         }
     }
 }
@@ -44,9 +69,10 @@ int ViagemRepository::cadastrarViagem(const Viagem &viagem)
     db.exigirConexao();
     pqxx::work transacao(*db.getConexao());
     const pqxx::result resultado = transacao.exec(
-        "INSERT INTO Viagens (data_viagem, cidade_destino, id_carro, id_motorista) "
-        "VALUES ($1, $2, $3, $4) RETURNING id_viagem",
-        pqxx::params{DataUtils::paraISO(viagem.dataViagem), viagem.cidadeDestino, viagem.veiculoId, viagem.motoristaId});
+        "INSERT INTO Viagens (data_viagem, cidade_destino, id_carro, id_motorista, id_auxiliar) "
+        "VALUES ($1, $2, $3, $4, $5) RETURNING id_viagem",
+        pqxx::params{DataUtils::paraISO(viagem.dataViagem), viagem.cidadeDestino, viagem.veiculoId, viagem.motoristaId,
+                     viagem.auxiliarViagemId});
     const int idViagem = resultado[0][0].as<int>();
     inserirPassageiros(transacao, idViagem, viagem.passageiros);
     transacao.commit();
@@ -62,9 +88,10 @@ bool ViagemRepository::atualizarViagem(const Viagem &viagem)
     db.exigirConexao();
     pqxx::work transacao(*db.getConexao());
     const pqxx::result resultado = transacao.exec(
-        "UPDATE Viagens SET data_viagem = $1, cidade_destino = $2, id_carro = $3, id_motorista = $4 "
-        "WHERE id_viagem = $5 RETURNING id_viagem",
-        pqxx::params{DataUtils::paraISO(viagem.dataViagem), viagem.cidadeDestino, viagem.veiculoId, viagem.motoristaId, viagem.id});
+        "UPDATE Viagens SET data_viagem = $1, cidade_destino = $2, id_carro = $3, id_motorista = $4, id_auxiliar = $5 "
+        "WHERE id_viagem = $6 RETURNING id_viagem",
+        pqxx::params{DataUtils::paraISO(viagem.dataViagem), viagem.cidadeDestino, viagem.veiculoId, viagem.motoristaId,
+                     viagem.auxiliarViagemId, viagem.id});
     if (resultado.empty())
         return false;
 
@@ -89,7 +116,7 @@ std::optional<ViagemDetalhe> ViagemRepository::buscarPorId(int idViagem)
     db.exigirConexao();
     pqxx::read_transaction transacao(*db.getConexao());
     const pqxx::result cabecalho = transacao.exec(
-        "SELECT id_viagem, data_viagem, cidade_destino, id_carro, id_motorista FROM Viagens WHERE id_viagem = $1",
+        "SELECT id_viagem, data_viagem, cidade_destino, id_carro, id_motorista, id_auxiliar FROM Viagens WHERE id_viagem = $1",
         pqxx::params{idViagem});
     if (cabecalho.empty())
         return std::nullopt;
@@ -100,13 +127,20 @@ std::optional<ViagemDetalhe> ViagemRepository::buscarPorId(int idViagem)
     detalhe.viagem.cidadeDestino = cabecalho[0]["cidade_destino"].c_str();
     detalhe.viagem.veiculoId = cabecalho[0]["id_carro"].as<int>();
     detalhe.viagem.motoristaId = cabecalho[0]["id_motorista"].as<int>();
+    if (!cabecalho[0]["id_auxiliar"].is_null())
+        detalhe.viagem.auxiliarViagemId = cabecalho[0]["id_auxiliar"].as<int>();
 
     const pqxx::result passageiros = transacao.exec(
         "SELECT vp.id_paciente, p.nome AS paciente_nome, p.cpf AS paciente_cpf, "
-        "vp.id_acompanhante, a.nome AS acompanhante_nome, a.cpf AS acompanhante_cpf "
+        "vp.id_acompanhante, vp.id_acompanhante_paciente, vp.acompanhante_nome AS acompanhante_avulso_nome, "
+        "vp.acompanhante_cpf AS acompanhante_avulso_cpf, vp.acompanhante_telefone AS acompanhante_avulso_telefone, "
+        "COALESCE(vp.acompanhante_nome, ap.nome, a.nome) AS acompanhante_nome, "
+        "COALESCE(vp.acompanhante_cpf, ap.cpf, a.cpf) AS acompanhante_cpf, "
+        "COALESCE(vp.acompanhante_telefone, ap.telefone, a.telefone) AS acompanhante_telefone "
         "FROM Viagem_Pacientes vp "
         "JOIN Pacientes p ON p.id_paciente = vp.id_paciente "
         "LEFT JOIN Acompanhantes a ON a.id_acompanhante = vp.id_acompanhante "
+        "LEFT JOIN Pacientes ap ON ap.id_paciente = vp.id_acompanhante_paciente "
         "WHERE vp.id_viagem = $1 ORDER BY p.nome, p.cpf",
         pqxx::params{idViagem});
 
@@ -119,9 +153,21 @@ std::optional<ViagemDetalhe> ViagemRepository::buscarPorId(int idViagem)
         if (!linha["id_acompanhante"].is_null())
         {
             passageiro.relacao.acompanhanteId = linha["id_acompanhante"].as<int>();
-            passageiro.acompanhanteNome = std::string(linha["acompanhante_nome"].c_str());
-            passageiro.acompanhanteCpf = std::string(linha["acompanhante_cpf"].c_str());
         }
+        if (!linha["id_acompanhante_paciente"].is_null())
+            passageiro.relacao.acompanhantePacienteId = linha["id_acompanhante_paciente"].as<int>();
+        if (!linha["acompanhante_avulso_cpf"].is_null())
+        {
+            passageiro.relacao.acompanhanteAvulso = AcompanhanteAvulso{
+                linha["acompanhante_avulso_nome"].c_str(), linha["acompanhante_avulso_cpf"].c_str(),
+                linha["acompanhante_avulso_telefone"].c_str()};
+        }
+        if (!linha["acompanhante_nome"].is_null())
+            passageiro.acompanhanteNome = std::string(linha["acompanhante_nome"].c_str());
+        if (!linha["acompanhante_cpf"].is_null())
+            passageiro.acompanhanteCpf = std::string(linha["acompanhante_cpf"].c_str());
+        if (!linha["acompanhante_telefone"].is_null())
+            passageiro.acompanhanteTelefone = std::string(linha["acompanhante_telefone"].c_str());
         detalhe.viagem.passageiros.push_back(passageiro.relacao);
         detalhe.passageiros.push_back(passageiro);
     }
@@ -134,7 +180,8 @@ std::vector<ViagemResumo> ViagemRepository::listarPorData(const std::string &dat
     pqxx::read_transaction transacao(*db.getConexao());
     const pqxx::result resultado = transacao.exec(
         "SELECT v.id_viagem, v.data_viagem, v.cidade_destino, c.placa, m.nome AS motorista, "
-        "COUNT(vp.id_paciente) AS total_pacientes, COUNT(vp.id_acompanhante) AS total_acompanhantes "
+        "COUNT(vp.id_paciente) AS total_pacientes, "
+        "COUNT(vp.id_acompanhante) + COUNT(vp.id_acompanhante_paciente) + COUNT(vp.acompanhante_cpf) AS total_acompanhantes "
         "FROM Viagens v JOIN Carros c ON c.id_carro = v.id_carro "
         "JOIN Motoristas m ON m.id_motorista = v.id_motorista "
         "LEFT JOIN Viagem_Pacientes vp ON vp.id_viagem = v.id_viagem "
@@ -160,17 +207,68 @@ std::vector<ViagemResumo> ViagemRepository::listarPorData(const std::string &dat
     return viagens;
 }
 
+std::optional<RelatorioViagem> ViagemRepository::gerarRelatorioViagem(int idViagem)
+{
+    db.exigirConexao();
+    pqxx::read_transaction transacao(*db.getConexao());
+    const pqxx::result cabecalho = transacao.exec(
+        "SELECT v.id_viagem, v.data_viagem, v.cidade_destino, c.placa, c.modelo, m.nome AS motorista, "
+        "a.nome AS auxiliar "
+        "FROM Viagens v JOIN Carros c ON c.id_carro = v.id_carro "
+        "JOIN Motoristas m ON m.id_motorista = v.id_motorista "
+        "LEFT JOIN Auxiliares_Viagem a ON a.id_auxiliar = v.id_auxiliar "
+        "WHERE v.id_viagem = $1",
+        pqxx::params{idViagem});
+    if (cabecalho.empty())
+        return std::nullopt;
+
+    RelatorioViagem relatorio;
+    relatorio.viagemId = cabecalho[0]["id_viagem"].as<int>();
+    relatorio.dataViagem = DataUtils::paraBR(cabecalho[0]["data_viagem"].c_str());
+    relatorio.cidadeDestino = cabecalho[0]["cidade_destino"].c_str();
+    relatorio.veiculoPlaca = cabecalho[0]["placa"].c_str();
+    relatorio.veiculoModelo = cabecalho[0]["modelo"].c_str();
+    relatorio.motorista = cabecalho[0]["motorista"].c_str();
+    if (!cabecalho[0]["auxiliar"].is_null())
+        relatorio.auxiliar = std::string(cabecalho[0]["auxiliar"].c_str());
+
+    const pqxx::result passageiros = transacao.exec(
+        "SELECT p.nome, p.cpf, p.telefone, COALESCE(vp.acompanhante_nome, ap.nome, a.nome) AS acompanhante_nome, "
+        "COALESCE(vp.acompanhante_telefone, ap.telefone, a.telefone) AS acompanhante_telefone "
+        "FROM Viagem_Pacientes vp JOIN Pacientes p ON p.id_paciente = vp.id_paciente "
+        "LEFT JOIN Acompanhantes a ON a.id_acompanhante = vp.id_acompanhante "
+        "LEFT JOIN Pacientes ap ON ap.id_paciente = vp.id_acompanhante_paciente "
+        "WHERE vp.id_viagem = $1 ORDER BY p.nome, p.cpf",
+        pqxx::params{idViagem});
+    relatorio.passageiros.reserve(passageiros.size());
+    for (const auto &linha : passageiros)
+    {
+        RelatorioViagemPassageiro passageiro;
+        passageiro.nome = linha["nome"].c_str();
+        passageiro.cpf = linha["cpf"].c_str();
+        if (!linha["telefone"].is_null())
+            passageiro.telefone = linha["telefone"].c_str();
+        if (!linha["acompanhante_nome"].is_null())
+            passageiro.acompanhanteNome = std::string(linha["acompanhante_nome"].c_str());
+        if (!linha["acompanhante_telefone"].is_null())
+            passageiro.acompanhanteTelefone = std::string(linha["acompanhante_telefone"].c_str());
+        relatorio.passageiros.push_back(passageiro);
+    }
+    return relatorio;
+}
+
 std::vector<HistoricoPacienteItem> ViagemRepository::gerarRelatorioHistoricoPaciente(const std::string &cpfPaciente)
 {
     db.exigirConexao();
     pqxx::read_transaction transacao(*db.getConexao());
     const pqxx::result resultado = transacao.exec(
         "SELECT v.data_viagem, v.cidade_destino, m.nome AS motorista, c.modelo AS veiculo_modelo, "
-        "c.placa AS veiculo_placa, a.nome AS acompanhante "
+        "c.placa AS veiculo_placa, COALESCE(vp.acompanhante_nome, ap.nome, a.nome) AS acompanhante "
         "FROM Viagem_Pacientes vp JOIN Pacientes p ON p.id_paciente = vp.id_paciente "
         "JOIN Viagens v ON v.id_viagem = vp.id_viagem JOIN Carros c ON c.id_carro = v.id_carro "
         "JOIN Motoristas m ON m.id_motorista = v.id_motorista "
         "LEFT JOIN Acompanhantes a ON a.id_acompanhante = vp.id_acompanhante "
+        "LEFT JOIN Pacientes ap ON ap.id_paciente = vp.id_acompanhante_paciente "
         "WHERE p.cpf = $1 ORDER BY v.data_viagem DESC, v.id_viagem DESC",
         pqxx::params{cpfPaciente});
 
@@ -196,7 +294,8 @@ VolumePassageirosResultado ViagemRepository::gerarRelatorioVolumePassageiros(con
     db.exigirConexao();
     pqxx::read_transaction transacao(*db.getConexao());
     const pqxx::result resultado = transacao.exec(
-        "SELECT COUNT(vp.id_paciente) AS total_pacientes, COUNT(vp.id_acompanhante) AS total_acompanhantes "
+        "SELECT COUNT(vp.id_paciente) AS total_pacientes, "
+        "COUNT(vp.id_acompanhante) + COUNT(vp.id_acompanhante_paciente) + COUNT(vp.acompanhante_cpf) AS total_acompanhantes "
         "FROM Viagens v LEFT JOIN Viagem_Pacientes vp ON vp.id_viagem = v.id_viagem "
         "WHERE v.data_viagem BETWEEN $1 AND $2",
         pqxx::params{DataUtils::paraISO(dataInicio), DataUtils::paraISO(dataFim)});
@@ -213,12 +312,13 @@ std::vector<MapaViagemItem> ViagemRepository::gerarMapaViagemDiario(const std::s
     pqxx::read_transaction transacao(*db.getConexao());
     const pqxx::result resultado = transacao.exec(
         "SELECT v.id_viagem, c.placa, c.modelo, m.nome AS motorista, v.cidade_destino, "
-        "p.nome AS paciente, p.telefone AS paciente_telefone, a.nome AS acompanhante "
+        "p.nome AS paciente, p.telefone AS paciente_telefone, COALESCE(vp.acompanhante_nome, ap.nome, a.nome) AS acompanhante "
         "FROM Viagens v JOIN Carros c ON c.id_carro = v.id_carro "
         "JOIN Motoristas m ON m.id_motorista = v.id_motorista "
         "JOIN Viagem_Pacientes vp ON vp.id_viagem = v.id_viagem "
         "JOIN Pacientes p ON p.id_paciente = vp.id_paciente "
         "LEFT JOIN Acompanhantes a ON a.id_acompanhante = vp.id_acompanhante "
+        "LEFT JOIN Pacientes ap ON ap.id_paciente = vp.id_acompanhante_paciente "
         "WHERE v.data_viagem = $1 ORDER BY v.id_viagem, p.nome, p.cpf",
         pqxx::params{DataUtils::paraISO(dataViagem)});
 

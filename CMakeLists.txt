@@ -45,6 +45,7 @@ add_executable(sistema_prefeitura
     src/ViewCadastros.cpp
     src/ViewViagens.cpp
     src/ViewRelatorios.cpp
+    src/ReportExporter.cpp
     src/ViagemRepository.cpp
     src/ViewPacientes.ui
     src/ViewCadastros.ui
@@ -81,4 +82,17 @@ if(BUILD_TESTING)
         target_compile_options(core_utils_tests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
     add_test(NAME core_utils_tests COMMAND core_utils_tests)
+
+    add_executable(report_exporter_tests
+        tests/ReportExporterTests.cpp
+        src/ReportExporter.cpp
+    )
+    target_include_directories(report_exporter_tests PRIVATE src)
+    target_link_libraries(report_exporter_tests PRIVATE Qt6::Widgets)
+    if(MSVC)
+        target_compile_options(report_exporter_tests PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(report_exporter_tests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    add_test(NAME report_exporter_tests COMMAND report_exporter_tests)
 endif()

@@ -66,16 +66,20 @@ int main(int argc, char *argv[])
         QPushButton:pressed { background: #bfd3e6; }
         QPushButton:disabled { background: #eef2f6; color: #98a2b3; }
         QPushButton#btnSalvar, QPushButton#btnAtualizar, QPushButton#btnConsultar,
-        QPushButton#btnBuscar, QPushButton#btnBuscarPaciente, QPushButton#btnBuscarAcompanhante,
+        QPushButton#btnBuscar, QPushButton#btnBuscarPaciente, QPushButton#btnVerificarAcompanhante,
         QPushButton#btnAdicionar, QPushButton#btnListar, QPushButton#btnHistorico,
-        QPushButton#btnVolume, QPushButton#btnMapa {
+        QPushButton#btnVolume, QPushButton#btnMapa, QPushButton#btnExportarPlanilha,
+        QPushButton#btnGerarPdf, QPushButton#btnExportarPlanilhaViagem,
+        QPushButton#btnGerarPdfViagem {
             background: #1d5fa7;
             color: #ffffff;
         }
         QPushButton#btnSalvar:hover, QPushButton#btnAtualizar:hover, QPushButton#btnConsultar:hover,
-        QPushButton#btnBuscar:hover, QPushButton#btnBuscarPaciente:hover, QPushButton#btnBuscarAcompanhante:hover,
+        QPushButton#btnBuscar:hover, QPushButton#btnBuscarPaciente:hover, QPushButton#btnVerificarAcompanhante:hover,
         QPushButton#btnAdicionar:hover, QPushButton#btnListar:hover, QPushButton#btnHistorico:hover,
-        QPushButton#btnVolume:hover, QPushButton#btnMapa:hover {
+        QPushButton#btnVolume:hover, QPushButton#btnMapa:hover, QPushButton#btnExportarPlanilha:hover,
+        QPushButton#btnGerarPdf:hover, QPushButton#btnExportarPlanilhaViagem:hover,
+        QPushButton#btnGerarPdfViagem:hover {
             background: #164c85;
         }
         QPushButton#btnDeletar, QPushButton#btnExcluir {

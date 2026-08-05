@@ -1,1 +1,71 @@
-<?xml version="1.0" encoding="UTF-8"?><ui version="4.0"><class>ViewRelatorios</class><widget class="QWidget" name="ViewRelatorios"><layout class="QVBoxLayout" name="v"><property name="leftMargin"><number>32</number></property><property name="topMargin"><number>24</number></property><property name="rightMargin"><number>32</number></property><item><layout class="QHBoxLayout" name="t"><item><widget class="QPushButton" name="btnVoltar"><property name="text"><string>&lt; Voltar</string></property></widget></item><item><widget class="QLabel" name="title"><property name="text"><string>Relatórios operacionais</string></property><property name="styleSheet"><string notr="true">font-size:24px;font-weight:700;</string></property></widget></item></layout></item><item><widget class="QTabWidget" name="tabs"><widget class="QWidget" name="tabH"><attribute name="title"><string>Histórico do paciente</string></attribute><layout class="QVBoxLayout" name="vh"><item><layout class="QHBoxLayout" name="bh"><item><widget class="QLineEdit" name="txtCpfHistorico"><property name="placeholderText"><string>CPF do paciente</string></property></widget></item><item><widget class="QPushButton" name="btnHistorico"><property name="text"><string>Gerar histórico</string></property></widget></item></layout></item><item><widget class="QTableWidget" name="tblHistorico"><property name="columnCount"><number>4</number></property><property name="rowCount"><number>0</number></property></widget></item></layout></widget><widget class="QWidget" name="tabV"><attribute name="title"><string>Volume</string></attribute><layout class="QVBoxLayout" name="vv"><item><layout class="QHBoxLayout" name="bv"><item><widget class="QDateEdit" name="dtInicio"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item><item><widget class="QDateEdit" name="dtFim"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item><item><widget class="QPushButton" name="btnVolume"><property name="text"><string>Calcular</string></property></widget></item></layout></item><item><widget class="QLabel" name="l1"><property name="text"><string>Pacientes</string></property></widget></item><item><widget class="QLabel" name="lblPacientes"><property name="text"><string>0</string></property><property name="styleSheet"><string notr="true">font-size:28px;font-weight:700;</string></property></widget></item><item><widget class="QLabel" name="l2"><property name="text"><string>Acompanhantes</string></property></widget></item><item><widget class="QLabel" name="lblAcompanhantes"><property name="text"><string>0</string></property><property name="styleSheet"><string notr="true">font-size:28px;font-weight:700;</string></property></widget></item><item><widget class="QLabel" name="l3"><property name="text"><string>Total de pessoas</string></property></widget></item><item><widget class="QLabel" name="lblPessoas"><property name="text"><string>0</string></property><property name="styleSheet"><string notr="true">font-size:28px;font-weight:700;</string></property></widget></item></layout></widget><widget class="QWidget" name="tabM"><attribute name="title"><string>Mapa diário</string></attribute><layout class="QVBoxLayout" name="vm"><item><layout class="QHBoxLayout" name="bm"><item><widget class="QDateEdit" name="dtMapa"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item><item><widget class="QPushButton" name="btnMapa"><property name="text"><string>Gerar mapa</string></property></widget></item></layout></item><item><widget class="QPlainTextEdit" name="txtMapa"><property name="readOnly"><bool>true</bool></property></widget></item></layout></widget></widget></item><item><widget class="QLabel" name="lblMensagem"/></item></layout></widget><resources/><connections/></ui>
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ViewRelatorios</class>
+ <widget class="QWidget" name="ViewRelatorios">
+  <layout class="QVBoxLayout" name="v">
+   <property name="leftMargin"><number>32</number></property>
+   <property name="topMargin"><number>24</number></property>
+   <property name="rightMargin"><number>32</number></property>
+   <item>
+    <layout class="QHBoxLayout" name="t">
+     <item><widget class="QPushButton" name="btnVoltar"><property name="text"><string>&lt; Voltar</string></property></widget></item>
+     <item><widget class="QLabel" name="title"><property name="text"><string>Relat&#243;rios operacionais</string></property><property name="styleSheet"><string notr="true">font-size:24px;font-weight:700;</string></property></widget></item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="tabs">
+     <widget class="QWidget" name="tabRelatorioViagem">
+      <attribute name="title"><string>Relat&#243;rio da viagem</string></attribute>
+      <layout class="QVBoxLayout" name="vr">
+       <item><widget class="QLabel" name="lblExplicacaoRelatorio"><property name="text"><string>Selecione a data e o destino da viagem para gerar a lista de passageiros.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+       <item>
+        <layout class="QFormLayout" name="fr">
+         <item row="0" column="0"><widget class="QLabel" name="lDataRelatorio"><property name="text"><string>Data da viagem</string></property></widget></item>
+         <item row="0" column="1"><widget class="QDateEdit" name="dtRelatorioViagem"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item>
+         <item row="1" column="0"><widget class="QLabel" name="lDestinoRelatorio"><property name="text"><string>Destino</string></property></widget></item>
+         <item row="1" column="1"><widget class="QComboBox" name="cmbDestinoRelatorio"/></item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="ar">
+         <item><widget class="QPushButton" name="btnExportarPlanilhaViagem"><property name="text"><string>Exportar planilha</string></property></widget></item>
+         <item><widget class="QPushButton" name="btnGerarPdfViagem"><property name="text"><string>Gerar PDF</string></property></widget></item>
+        </layout>
+       </item>
+       <item><spacer name="spacerRelatorio"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabH">
+      <attribute name="title"><string>Hist&#243;rico do paciente</string></attribute>
+      <layout class="QVBoxLayout" name="vh">
+       <item><layout class="QHBoxLayout" name="bh"><item><widget class="QLineEdit" name="txtCpfHistorico"><property name="placeholderText"><string>CPF do paciente</string></property></widget></item><item><widget class="QPushButton" name="btnHistorico"><property name="text"><string>Gerar hist&#243;rico</string></property></widget></item></layout></item>
+       <item><widget class="QTableWidget" name="tblHistorico"><property name="columnCount"><number>4</number></property><property name="rowCount"><number>0</number></property></widget></item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabV">
+      <attribute name="title"><string>Volume</string></attribute>
+      <layout class="QVBoxLayout" name="vv">
+       <item><layout class="QHBoxLayout" name="bv"><item><widget class="QDateEdit" name="dtInicio"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item><item><widget class="QDateEdit" name="dtFim"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item><item><widget class="QPushButton" name="btnVolume"><property name="text"><string>Calcular</string></property></widget></item></layout></item>
+       <item><widget class="QLabel" name="l1"><property name="text"><string>Pacientes</string></property></widget></item>
+       <item><widget class="QLabel" name="lblPacientes"><property name="text"><string>0</string></property><property name="styleSheet"><string notr="true">font-size:28px;font-weight:700;</string></property></widget></item>
+       <item><widget class="QLabel" name="l2"><property name="text"><string>Acompanhantes</string></property></widget></item>
+       <item><widget class="QLabel" name="lblAcompanhantes"><property name="text"><string>0</string></property><property name="styleSheet"><string notr="true">font-size:28px;font-weight:700;</string></property></widget></item>
+       <item><widget class="QLabel" name="l3"><property name="text"><string>Total de pessoas</string></property></widget></item>
+       <item><widget class="QLabel" name="lblPessoas"><property name="text"><string>0</string></property><property name="styleSheet"><string notr="true">font-size:28px;font-weight:700;</string></property></widget></item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabM">
+      <attribute name="title"><string>Mapa di&#225;rio</string></attribute>
+      <layout class="QVBoxLayout" name="vm">
+       <item><layout class="QHBoxLayout" name="bm"><item><widget class="QDateEdit" name="dtMapa"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item><item><widget class="QPushButton" name="btnMapa"><property name="text"><string>Gerar mapa</string></property></widget></item></layout></item>
+       <item><widget class="QPlainTextEdit" name="txtMapa"><property name="readOnly"><bool>true</bool></property></widget></item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item><widget class="QLabel" name="lblMensagem"/></item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

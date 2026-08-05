@@ -17,6 +17,14 @@ struct Motorista
     std::string cpf;
 };
 
+struct AuxiliarViagem
+{
+    int id = 0;
+    std::string nome;
+    std::string cpf;
+    std::string telefone;
+};
+
 struct Paciente
 {
     int id = 0;
@@ -36,9 +44,18 @@ struct Acompanhante
 
 // Representa uma linha da tabela associativa: um paciente embarcado,
 // com um acompanhante opcional, dentro do contexto de UMA viagem.
+struct AcompanhanteAvulso
+{
+    std::string nomeCompleto;
+    std::string cpf;
+    std::string telefone;
+};
+
 struct PassageiroDaViagem
 {
     int pacienteId = 0;
+    std::optional<int> acompanhantePacienteId;
+    std::optional<AcompanhanteAvulso> acompanhanteAvulso;
     std::optional<int> acompanhanteId; // regra: no máx. 1 por paciente/viagem
 };
 
@@ -49,6 +66,7 @@ struct Viagem
     std::string cidadeDestino;
     int veiculoId = 0;
     int motoristaId = 0;
+    std::optional<int> auxiliarViagemId;
     std::vector<PassageiroDaViagem> passageiros;
 };
 
@@ -61,6 +79,7 @@ struct PassageiroViagemDetalhe
     std::string pacienteCpf;
     std::optional<std::string> acompanhanteNome;
     std::optional<std::string> acompanhanteCpf;
+    std::optional<std::string> acompanhanteTelefone;
 };
 
 struct ViagemDetalhe
@@ -113,4 +132,25 @@ struct MapaViagemItem
     std::string motorista;
     std::string cidadeDestino;
     std::vector<MapaViagemPassageiro> passageiros;
+};
+
+struct RelatorioViagemPassageiro
+{
+    std::string nome;
+    std::string cpf;
+    std::string telefone;
+    std::optional<std::string> acompanhanteNome;
+    std::optional<std::string> acompanhanteTelefone;
+};
+
+struct RelatorioViagem
+{
+    int viagemId = 0;
+    std::string dataViagem;
+    std::string cidadeDestino;
+    std::string veiculoPlaca;
+    std::string veiculoModelo;
+    std::string motorista;
+    std::optional<std::string> auxiliar;
+    std::vector<RelatorioViagemPassageiro> passageiros;
 };

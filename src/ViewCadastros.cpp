@@ -19,7 +19,7 @@ namespace
 }
 
 ViewCadastros::ViewCadastros(Database &db, QWidget *parent)
-    : QWidget(parent), ui(new Ui::ViewCadastros), acompanhantes(db), motoristas(db), veiculos(db)
+    : QWidget(parent), ui(new Ui::ViewCadastros), acompanhantes(db), auxiliares(db), motoristas(db), veiculos(db)
 {
     ui->setupUi(this);
     connect(ui->cmbTipo, qOverload<int>(&QComboBox::currentIndexChanged), this, &ViewCadastros::mudarTipo);
@@ -41,12 +41,12 @@ void ViewCadastros::mudarTipo()
 void ViewCadastros::configurarTipo()
 {
     const int tipo = ui->cmbTipo->currentIndex();
-    const bool veiculo = tipo == 2, motorista = tipo == 1;
+    const bool veiculo = tipo == 1, temTelefone = tipo == 2;
     ui->lblChave->setText(veiculo ? "Placa *" : "CPF *");
     ui->lblNome->setText(veiculo ? "Modelo *" : "Nome completo *");
     ui->txtChave->setPlaceholderText(veiculo ? "ABC1D23 ou ABC-1234" : "000.000.000-00");
-    ui->lblTelefone->setVisible(!veiculo && !motorista);
-    ui->txtTelefone->setVisible(!veiculo && !motorista);
+    ui->lblTelefone->setVisible(temTelefone);
+    ui->txtTelefone->setVisible(temTelefone);
     ui->txtChave->setMaxLength(veiculo ? 8 : 14);
     ui->txtNome->setMaxLength(veiculo ? 100 : 150);
 }
@@ -71,13 +71,13 @@ void ViewCadastros::mensagem(const QString &texto, bool erro)
 bool ViewCadastros::validar()
 {
     const int tipo = ui->cmbTipo->currentIndex();
-    const QString chave = tipo == 2 ? placa(ui->txtChave->text()) : digitos(ui->txtChave->text());
+    const QString chave = tipo == 1 ? placa(ui->txtChave->text()) : digitos(ui->txtChave->text());
     if (ui->txtNome->text().trimmed().isEmpty())
     {
         mensagem("Preencha o nome ou modelo.", true);
         return false;
     }
-    if (tipo == 2)
+    if (tipo == 1)
     {
         if (!QRegularExpression("^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$").match(chave).hasMatch())
         {
@@ -90,7 +90,7 @@ bool ViewCadastros::validar()
         mensagem("Informe um CPF válido.", true);
         return false;
     }
-    if (tipo == 0 && !ui->txtTelefone->text().isEmpty() && !QRegularExpression("^[0-9]{10,11}$").match(digitos(ui->txtTelefone->text())).hasMatch())
+    if (tipo == 2 && !ui->txtTelefone->text().isEmpty() && !QRegularExpression("^[0-9]{10,11}$").match(digitos(ui->txtTelefone->text())).hasMatch())
     {
         mensagem("Telefone deve ter DDD e 10 ou 11 dígitos.", true);
         return false;
@@ -121,23 +121,23 @@ void ViewCadastros::buscar()
     try
     {
         const int tipo = ui->cmbTipo->currentIndex();
-        const QString chave = tipo == 2 ? placa(ui->txtChave->text()) : digitos(ui->txtChave->text());
+        const QString chave = tipo == 1 ? placa(ui->txtChave->text()) : digitos(ui->txtChave->text());
         if (chave.isEmpty())
         {
             mensagem("Informe a identificação para buscar.", true);
             return;
         }
-        if (tipo != 2 && !CpfUtils::verificar(chave.toStdString()))
+        if (tipo != 1 && !CpfUtils::verificar(chave.toStdString()))
         {
             mensagem("Informe um CPF válido.", true);
             return;
         }
-        if (tipo == 2 && !QRegularExpression("^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$").match(chave).hasMatch())
+        if (tipo == 1 && !QRegularExpression("^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$").match(chave).hasMatch())
         {
             mensagem("Informe uma placa válida.", true);
             return;
         }
-        if (tipo == 0)
+        if (tipo == -1)
         {
             auto x = acompanhantes.buscarPorCPF(chave.toStdString());
             if (!x)
@@ -149,7 +149,7 @@ void ViewCadastros::buscar()
             ui->txtNome->setText(QString::fromStdString(x->nomeCompleto));
             ui->txtTelefone->setText(QString::fromStdString(x->telefone));
         }
-        else if (tipo == 1)
+        else if (tipo == 0)
         {
             auto x = motoristas.buscarPorCPF(chave.toStdString());
             if (!x)
@@ -160,7 +160,7 @@ void ViewCadastros::buscar()
             selecionadoId = x->id;
             ui->txtNome->setText(QString::fromStdString(x->nome));
         }
-        else
+        else if (tipo == 1)
         {
             auto x = veiculos.buscarPorPlaca(chave.toStdString());
             if (!x)
@@ -170,6 +170,18 @@ void ViewCadastros::buscar()
             }
             selecionadoId = x->id;
             ui->txtNome->setText(QString::fromStdString(x->modelo));
+        }
+        else
+        {
+            auto x = auxiliares.buscarPorCPF(chave.toStdString());
+            if (!x)
+            {
+                mensagem("Auxiliar não encontrado.", true);
+                return;
+            }
+            selecionadoId = x->id;
+            ui->txtNome->setText(QString::fromStdString(x->nome));
+            ui->txtTelefone->setText(QString::fromStdString(x->telefone));
         }
         ui->txtChave->setText(chave);
         ui->txtChave->setReadOnly(true);
@@ -195,14 +207,17 @@ void ViewCadastros::salvar()
     try
     {
         const int tipo = ui->cmbTipo->currentIndex();
-        const QString chave = tipo == 2 ? placa(ui->txtChave->text()) : digitos(ui->txtChave->text());
+        const QString chave = tipo == 1 ? placa(ui->txtChave->text()) : digitos(ui->txtChave->text());
         int id = 0;
-        if (tipo == 0)
+        if (tipo == -1)
             id = acompanhantes.cadastrar(Acompanhante{0, ui->txtNome->text().trimmed().toStdString(), chave.toStdString(), digitos(ui->txtTelefone->text()).toStdString()});
-        else if (tipo == 1)
+        else if (tipo == 0)
             id = motoristas.cadastrar(Motorista{0, ui->txtNome->text().trimmed().toStdString(), chave.toStdString()});
-        else
+        else if (tipo == 1)
             id = veiculos.cadastrar(Veiculo{0, chave.toStdString(), ui->txtNome->text().trimmed().toStdString()});
+        else
+            id = auxiliares.cadastrar(AuxiliarViagem{0, ui->txtNome->text().trimmed().toStdString(), chave.toStdString(),
+                                                     digitos(ui->txtTelefone->text()).toStdString()});
         limpar();
         mensagem("Cadastro salvo com sucesso. Código: " + QString::number(id));
     }
@@ -227,12 +242,15 @@ void ViewCadastros::atualizar()
     {
         const int tipo = ui->cmbTipo->currentIndex();
         bool ok = false;
-        if (tipo == 0)
+        if (tipo == -1)
             ok = acompanhantes.atualizar(Acompanhante{selecionadoId, ui->txtNome->text().trimmed().toStdString(), digitos(ui->txtChave->text()).toStdString(), digitos(ui->txtTelefone->text()).toStdString()});
-        else if (tipo == 1)
+        else if (tipo == 0)
             ok = motoristas.atualizar(Motorista{selecionadoId, ui->txtNome->text().trimmed().toStdString(), digitos(ui->txtChave->text()).toStdString()});
-        else
+        else if (tipo == 1)
             ok = veiculos.atualizar(Veiculo{selecionadoId, placa(ui->txtChave->text()).toStdString(), ui->txtNome->text().trimmed().toStdString()});
+        else
+            ok = auxiliares.atualizar(AuxiliarViagem{selecionadoId, ui->txtNome->text().trimmed().toStdString(),
+                                                     digitos(ui->txtChave->text()).toStdString(), digitos(ui->txtTelefone->text()).toStdString()});
         if (!ok)
         {
             limpar();
@@ -264,7 +282,9 @@ void ViewCadastros::excluirCadastro()
     try
     {
         const int tipo = ui->cmbTipo->currentIndex();
-        const bool ok = tipo == 0 ? acompanhantes.deletar(selecionadoId) : (tipo == 1 ? motoristas.deletar(selecionadoId) : veiculos.deletar(selecionadoId));
+        const bool ok = tipo == 0 ? motoristas.deletar(selecionadoId)
+                                  : (tipo == 1 ? veiculos.deletar(selecionadoId)
+                                               : auxiliares.deletar(selecionadoId));
         if (!ok)
             QMessageBox::warning(this, "Cadastro não encontrado", "O registro não existe mais.");
         else

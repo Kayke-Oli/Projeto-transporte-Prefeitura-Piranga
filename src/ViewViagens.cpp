@@ -1,28 +1,84 @@
 #include "ViewViagens.h"
 
 #include "CpfUtils.h"
+#include "ReportExporter.h"
 #include "ui_ViewViagens.h"
 
 #include <QAbstractItemView>
 #include <QHeaderView>
+#include <QFileDialog>
 #include <QMessageBox>
+#include <QRegularExpression>
+#include <QSignalBlocker>
 #include <QTableWidgetItem>
+
+#include <algorithm>
+
+namespace
+{
+    QString somenteDigitos(const QString &texto)
+    {
+        QString numeros;
+        numeros.reserve(texto.size());
+        for (const QChar caractere : texto)
+        {
+            if (caractere.isDigit())
+                numeros += caractere;
+        }
+        return numeros;
+    }
+
+    QString formatarCpf(const QString &texto)
+    {
+        const QString numeros = somenteDigitos(texto).left(11);
+        QString resultado;
+        for (qsizetype indice = 0; indice < numeros.size(); ++indice)
+        {
+            if (indice == 3 || indice == 6)
+                resultado += ".";
+            else if (indice == 9)
+                resultado += "-";
+            resultado += numeros[indice];
+        }
+        return resultado;
+    }
+
+    QString formatarTelefone(const QString &texto)
+    {
+        const QString numeros = somenteDigitos(texto).left(11);
+        if (numeros.isEmpty())
+            return {};
+        if (numeros.size() <= 2)
+            return "(" + numeros;
+
+        const QString ddd = numeros.left(2);
+        const QString numero = numeros.mid(2);
+        const int tamanhoPrimeiroBloco = numeros.size() == 11 ? 5 : 4;
+        if (numero.size() <= tamanhoPrimeiroBloco)
+            return "(" + ddd + ") " + numero;
+
+        return "(" + ddd + ") " + numero.left(tamanhoPrimeiroBloco) + "-" + numero.mid(tamanhoPrimeiroBloco);
+    }
+}
 
 ViewViagens::ViewViagens(Database &db, QWidget *parent)
     : QWidget(parent),
       ui(new Ui::ViewViagens),
       pacientes(db),
       acompanhantes(db),
+      auxiliares(db),
       motoristas(db),
       veiculos(db),
       viagens(db)
 {
     ui->setupUi(this);
     configurarTabelas();
+    configurarMascaras();
 
     connect(ui->btnVoltar, &QPushButton::clicked, this, &ViewViagens::voltarSolicitado);
     connect(ui->btnBuscarPaciente, &QPushButton::clicked, this, &ViewViagens::buscarPaciente);
-    connect(ui->btnBuscarAcompanhante, &QPushButton::clicked, this, &ViewViagens::buscarAcompanhante);
+    connect(ui->btnVerificarAcompanhante, &QPushButton::clicked, this, [this]
+            { prepararAcompanhante(); });
     connect(ui->btnAdicionar, &QPushButton::clicked, this, &ViewViagens::adicionarPassageiro);
     connect(ui->btnRemover, &QPushButton::clicked, this, &ViewViagens::removerPassageiro);
     connect(ui->btnSalvar, &QPushButton::clicked, this, &ViewViagens::salvar);
@@ -31,7 +87,8 @@ ViewViagens::ViewViagens(Database &db, QWidget *parent)
     connect(ui->btnExcluir, &QPushButton::clicked, this, &ViewViagens::excluirViagem);
     connect(ui->btnLimpar, &QPushButton::clicked, this, &ViewViagens::limpar);
     connect(ui->txtCpfPaciente, &QLineEdit::returnPressed, this, &ViewViagens::buscarPaciente);
-    connect(ui->txtCpfAcompanhante, &QLineEdit::returnPressed, this, &ViewViagens::buscarAcompanhante);
+    connect(ui->txtCpfAcompanhante, &QLineEdit::returnPressed, this, [this]
+            { prepararAcompanhante(); });
 
     prepararTela();
 }
@@ -65,6 +122,27 @@ void ViewViagens::configurarTabelas()
     ui->tblViagens->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
 }
 
+void ViewViagens::configurarMascaras()
+{
+    const auto formatarCampo = [](QLineEdit *campo, const QString &texto, const auto &formatador)
+    {
+        const QString formatado = formatador(texto);
+        if (campo->text() == formatado)
+            return;
+
+        const QSignalBlocker bloqueio(campo);
+        campo->setText(formatado);
+        campo->setCursorPosition(formatado.size());
+    };
+
+    connect(ui->txtCpfPaciente, &QLineEdit::textChanged, this, [formatarCampo, this](const QString &texto)
+            { formatarCampo(ui->txtCpfPaciente, texto, formatarCpf); });
+    connect(ui->txtCpfAcompanhante, &QLineEdit::textChanged, this, [formatarCampo, this](const QString &texto)
+            { formatarCampo(ui->txtCpfAcompanhante, texto, formatarCpf); });
+    connect(ui->txtTelefoneAcompanhante, &QLineEdit::textChanged, this, [formatarCampo, this](const QString &texto)
+            { formatarCampo(ui->txtTelefoneAcompanhante, texto, formatarTelefone); });
+}
+
 void ViewViagens::mensagem(const QString &texto)
 {
     ui->lblMensagem->setStyleSheet("color:#0f5132;");
@@ -87,6 +165,11 @@ void ViewViagens::erroSql(const pqxx::sql_error &erroBanco, const QString &acao)
     {
         detalhe = "Um paciente, acompanhante, veículo ou motorista vinculado não está mais disponível. Atualize os dados e tente novamente.";
     }
+    else if (codigo == "P0001")
+    {
+        titulo = "Paciente ja possui viagem";
+        detalhe = "Este paciente ja esta incluido em outra viagem na mesma data. Remova-o da viagem anterior antes de inclui-lo nesta.";
+    }
     else if (codigo == "23505")
     {
         detalhe = "Há um vínculo de passageiro duplicado nesta viagem.";
@@ -94,6 +177,12 @@ void ViewViagens::erroSql(const pqxx::sql_error &erroBanco, const QString &acao)
     else if (codigo == "23514" || codigo == "22001" || codigo == "22007")
     {
         detalhe = "Os dados não atendem às regras de integridade exigidas pelo sistema.";
+    }
+    else if (codigo == "42P01")
+    {
+        titulo = "Atualizacao do banco necessaria";
+        detalhe = "A estrutura do banco esta desatualizada. Execute o arquivo "
+                  "src/migracao_auxiliares_relatorios.sql e tente novamente.";
     }
     else
     {
@@ -116,6 +205,8 @@ void ViewViagens::carregarRecursos()
     {
         ui->cmbVeiculo->clear();
         ui->cmbMotorista->clear();
+        ui->cmbAuxiliar->clear();
+        ui->cmbAuxiliar->addItem("Sem auxiliar", 0);
 
         for (const auto &veiculo : veiculos.listarTodos())
         {
@@ -126,6 +217,11 @@ void ViewViagens::carregarRecursos()
         {
             ui->cmbMotorista->addItem(
                 QString::fromStdString(motorista.nome + " — " + motorista.cpf), motorista.id);
+        }
+        for (const auto &auxiliar : auxiliares.listarTodos())
+        {
+            ui->cmbAuxiliar->addItem(
+                QString::fromStdString(auxiliar.nome + " - " + auxiliar.cpf), auxiliar.id);
         }
 
         if (ui->cmbVeiculo->count() == 0 || ui->cmbMotorista->count() == 0)
@@ -148,24 +244,43 @@ void ViewViagens::limpar()
     viagemId = 0;
     passageiros.clear();
     pacientePendente.reset();
-    acompanhantePendente.reset();
+    acompanhantePacientePendente.reset();
+    acompanhanteAvulsoPendente.reset();
 
     ui->dtViagem->setDate(QDate::currentDate());
     ui->txtDestino->clear();
     ui->txtCpfPaciente->clear();
+    ui->txtNomeAcompanhante->clear();
     ui->txtCpfAcompanhante->clear();
+    ui->txtTelefoneAcompanhante->clear();
     ui->lblPaciente->clear();
     ui->lblAcompanhante->clear();
     ui->tblPassageiros->setRowCount(0);
     ui->lblMensagem->clear();
     ui->btnExcluir->setEnabled(false);
+    atualizarCamposAcompanhante(false);
     carregarRecursos();
+}
+
+void ViewViagens::atualizarCamposAcompanhante(bool habilitado)
+{
+    ui->txtNomeAcompanhante->setEnabled(habilitado);
+    ui->txtCpfAcompanhante->setEnabled(habilitado);
+    ui->txtTelefoneAcompanhante->setEnabled(habilitado);
+    ui->btnVerificarAcompanhante->setEnabled(habilitado);
 }
 
 void ViewViagens::buscarPaciente()
 {
     pacientePendente.reset();
+    acompanhantePacientePendente.reset();
+    acompanhanteAvulsoPendente.reset();
     ui->lblPaciente->clear();
+    ui->txtNomeAcompanhante->clear();
+    ui->txtCpfAcompanhante->clear();
+    ui->txtTelefoneAcompanhante->clear();
+    ui->lblAcompanhante->clear();
+    atualizarCamposAcompanhante(false);
 
     const std::string cpf = CpfUtils::normalizar(ui->txtCpfPaciente->text().toStdString());
     if (!CpfUtils::verificar(cpf))
@@ -184,6 +299,7 @@ void ViewViagens::buscarPaciente()
         }
         mensagem("Paciente localizado.");
         ui->lblPaciente->setText(QString::fromStdString(pacientePendente->nomeCompleto));
+        atualizarCamposAcompanhante(true);
     }
     catch (const pqxx::sql_error &erroBanco)
     {
@@ -198,7 +314,14 @@ void ViewViagens::buscarPaciente()
 void ViewViagens::buscarAcompanhante()
 {
     acompanhantePendente.reset();
+    acompanhantePacientePendente.reset();
     ui->lblAcompanhante->clear();
+
+    if (!pacientePendente.has_value())
+    {
+        erro("Busque um paciente antes de informar o acompanhante.");
+        return;
+    }
 
     if (ui->txtCpfAcompanhante->text().trimmed().isEmpty())
     {
@@ -217,6 +340,29 @@ void ViewViagens::buscarAcompanhante()
     try
     {
         acompanhantePendente = acompanhantes.buscarPorCPF(cpf);
+        if (acompanhantePendente.has_value() && acompanhantePendente->cpf == pacientePendente->cpf)
+        {
+            acompanhantePendente.reset();
+            erro("O paciente não pode ser seu próprio acompanhante.");
+            return;
+        }
+        if (!acompanhantePendente.has_value())
+        {
+            acompanhantePacientePendente = pacientes.buscarPorCPF(cpf);
+            if (acompanhantePacientePendente.has_value())
+            {
+                if (acompanhantePacientePendente->id == pacientePendente->id)
+                {
+                    acompanhantePacientePendente.reset();
+                    erro("O paciente não pode ser seu próprio acompanhante.");
+                    return;
+                }
+                mensagem("Paciente localizado como acompanhante.");
+                ui->lblAcompanhante->setText(
+                    QString::fromStdString(acompanhantePacientePendente->nomeCompleto) + " (paciente cadastrado)");
+                return;
+            }
+        }
         if (!acompanhantePendente.has_value())
         {
             erro("Acompanhante não encontrado. Deixe o campo vazio se o paciente viajar sem acompanhante.");
@@ -235,8 +381,86 @@ void ViewViagens::buscarAcompanhante()
     }
 }
 
+bool ViewViagens::prepararAcompanhante()
+{
+    acompanhantePendente.reset();
+    acompanhantePacientePendente.reset();
+    acompanhanteAvulsoPendente.reset();
+    ui->lblAcompanhante->clear();
+
+    if (!pacientePendente.has_value())
+    {
+        erro("Busque um paciente antes de informar o acompanhante.");
+        return false;
+    }
+
+    const QString nome = ui->txtNomeAcompanhante->text().trimmed();
+    const QString cpfTexto = ui->txtCpfAcompanhante->text().trimmed();
+    QString telefone = ui->txtTelefoneAcompanhante->text();
+    telefone.remove(QRegularExpression("[^0-9]"));
+
+    if (nome.isEmpty() && cpfTexto.isEmpty() && telefone.isEmpty())
+        return true;
+
+    const std::string cpf = CpfUtils::normalizar(cpfTexto.toStdString());
+    if (!CpfUtils::verificar(cpf))
+    {
+        erro("Informe um CPF valido para o acompanhante.");
+        return false;
+    }
+
+    try
+    {
+        acompanhantePacientePendente = pacientes.buscarPorCPF(cpf);
+        if (acompanhantePacientePendente.has_value())
+        {
+            if (acompanhantePacientePendente->id == pacientePendente->id)
+            {
+                acompanhantePacientePendente.reset();
+                erro("O paciente nao pode ser seu proprio acompanhante.");
+                return false;
+            }
+
+            ui->txtNomeAcompanhante->setText(QString::fromStdString(acompanhantePacientePendente->nomeCompleto));
+            ui->txtTelefoneAcompanhante->setText(QString::fromStdString(acompanhantePacientePendente->telefone));
+            ui->lblAcompanhante->setText("Paciente cadastrado localizado como acompanhante.");
+            mensagem("Acompanhante paciente localizado.");
+            return true;
+        }
+    }
+    catch (const pqxx::sql_error &erroBanco)
+    {
+        erroSql(erroBanco, "buscar o acompanhante");
+        return false;
+    }
+    catch (const std::exception &)
+    {
+        erro("Nao foi possivel buscar o acompanhante. Verifique a conexao com o banco.");
+        return false;
+    }
+
+    if (nome.isEmpty() || telefone.isEmpty())
+    {
+        erro("Para um acompanhante novo, informe nome, CPF e telefone.");
+        return false;
+    }
+    if (!QRegularExpression("^[0-9]{10,11}$").match(telefone).hasMatch())
+    {
+        erro("O telefone do acompanhante deve ter DDD e 10 ou 11 digitos.");
+        return false;
+    }
+
+    acompanhanteAvulsoPendente = AcompanhanteAvulso{nome.toStdString(), cpf, telefone.toStdString()};
+    ui->lblAcompanhante->setText("Acompanhante informado para esta viagem.");
+    mensagem("Acompanhante pronto para incluir na viagem.");
+    return true;
+}
+
 void ViewViagens::adicionarPassageiro()
 {
+    if (pacientePendente.has_value() && !prepararAcompanhante())
+        return;
+
     if (!pacientePendente.has_value())
     {
         erro("Busque e confirme o paciente antes de adicioná-lo à viagem.");
@@ -256,32 +480,52 @@ void ViewViagens::adicionarPassageiro()
     detalhe.relacao.pacienteId = pacientePendente->id;
     detalhe.pacienteNome = pacientePendente->nomeCompleto;
     detalhe.pacienteCpf = pacientePendente->cpf;
-    if (acompanhantePendente.has_value())
+    if (acompanhantePacientePendente.has_value())
     {
-        detalhe.relacao.acompanhanteId = acompanhantePendente->id;
-        detalhe.acompanhanteNome = acompanhantePendente->nomeCompleto;
-        detalhe.acompanhanteCpf = acompanhantePendente->cpf;
+        detalhe.relacao.acompanhantePacienteId = acompanhantePacientePendente->id;
+        detalhe.acompanhanteNome = acompanhantePacientePendente->nomeCompleto;
+        detalhe.acompanhanteCpf = acompanhantePacientePendente->cpf;
+        detalhe.acompanhanteTelefone = acompanhantePacientePendente->telefone;
+    }
+    else if (acompanhanteAvulsoPendente.has_value())
+    {
+        detalhe.relacao.acompanhanteAvulso = acompanhanteAvulsoPendente;
+        detalhe.acompanhanteNome = acompanhanteAvulsoPendente->nomeCompleto;
+        detalhe.acompanhanteCpf = acompanhanteAvulsoPendente->cpf;
+        detalhe.acompanhanteTelefone = acompanhanteAvulsoPendente->telefone;
     }
 
     passageiros.push_back(detalhe);
     desenharPassageiros();
     pacientePendente.reset();
     acompanhantePendente.reset();
+    acompanhantePacientePendente.reset();
+    acompanhanteAvulsoPendente.reset();
     ui->txtCpfPaciente->clear();
+    ui->txtNomeAcompanhante->clear();
     ui->txtCpfAcompanhante->clear();
+    ui->txtTelefoneAcompanhante->clear();
     ui->lblPaciente->clear();
     ui->lblAcompanhante->clear();
+    atualizarCamposAcompanhante(false);
     mensagem("Passageiro incluído na viagem.");
 }
 
 void ViewViagens::desenharPassageiros()
 {
+    std::sort(passageiros.begin(), passageiros.end(), [](const PassageiroViagemDetalhe &esquerda,
+                                                         const PassageiroViagemDetalhe &direita)
+              {
+                  const int comparacao = QString::localeAwareCompare(QString::fromStdString(esquerda.pacienteNome),
+                                                                       QString::fromStdString(direita.pacienteNome));
+                  return comparacao == 0 ? esquerda.pacienteCpf < direita.pacienteCpf : comparacao < 0;
+              });
     ui->tblPassageiros->setRowCount(static_cast<int>(passageiros.size()));
     for (int linha = 0; linha < static_cast<int>(passageiros.size()); ++linha)
     {
         const auto &passageiro = passageiros[linha];
         ui->tblPassageiros->setItem(linha, 0, new QTableWidgetItem(QString::fromStdString(passageiro.pacienteNome)));
-        ui->tblPassageiros->setItem(linha, 1, new QTableWidgetItem(QString::fromStdString(passageiro.pacienteCpf)));
+        ui->tblPassageiros->setItem(linha, 1, new QTableWidgetItem(formatarCpf(QString::fromStdString(passageiro.pacienteCpf))));
         ui->tblPassageiros->setItem(
             linha, 2,
             new QTableWidgetItem(passageiro.acompanhanteNome.has_value()
@@ -312,6 +556,8 @@ Viagem ViewViagens::montarViagem() const
     viagem.cidadeDestino = ui->txtDestino->text().trimmed().toStdString();
     viagem.veiculoId = ui->cmbVeiculo->currentData().toInt();
     viagem.motoristaId = ui->cmbMotorista->currentData().toInt();
+    if (ui->cmbAuxiliar->currentData().toInt() > 0)
+        viagem.auxiliarViagemId = ui->cmbAuxiliar->currentData().toInt();
     for (const auto &passageiro : passageiros)
         viagem.passageiros.push_back(passageiro.relacao);
     return viagem;
@@ -437,10 +683,18 @@ void ViewViagens::carregarSelecionada(int linha, int)
             if (ui->cmbMotorista->itemData(indice).toInt() == detalhe->viagem.motoristaId)
                 ui->cmbMotorista->setCurrentIndex(indice);
         }
+        for (int indice = 0; indice < ui->cmbAuxiliar->count(); ++indice)
+        {
+            const int auxiliarId = detalhe->viagem.auxiliarViagemId.value_or(0);
+            if (ui->cmbAuxiliar->itemData(indice).toInt() == auxiliarId)
+                ui->cmbAuxiliar->setCurrentIndex(indice);
+        }
 
         passageiros = detalhe->passageiros;
         desenharPassageiros();
         ui->btnExcluir->setEnabled(true);
+        ui->btnExportarPlanilha->setEnabled(true);
+        ui->btnGerarPdf->setEnabled(true);
         mensagem("Viagem carregada. Revise os dados antes de salvar as alterações.");
     }
     catch (const pqxx::sql_error &erroBanco)
@@ -495,4 +749,90 @@ void ViewViagens::excluirViagem()
 
     if (viagemId != 0)
         ui->btnExcluir->setEnabled(true);
+}
+
+void ViewViagens::exportarPlanilha()
+{
+    if (viagemId == 0)
+    {
+        erro("Selecione uma viagem antes de exportar.");
+        return;
+    }
+
+    try
+    {
+        const auto relatorio = viagens.gerarRelatorioViagem(viagemId);
+        if (!relatorio.has_value())
+        {
+            erro("A viagem selecionada não foi encontrada.");
+            return;
+        }
+
+        QString caminho = QFileDialog::getSaveFileName(
+            this, "Salvar planilha da viagem", "relatorio_viagem_" + QString::number(viagemId) + ".csv",
+            "Planilha CSV (*.csv)");
+        if (caminho.isEmpty())
+            return;
+        if (!caminho.endsWith(".csv", Qt::CaseInsensitive))
+            caminho += ".csv";
+
+        QString motivo;
+        if (!ReportExporter::exportarCsv(*relatorio, caminho, &motivo))
+        {
+            erro(motivo);
+            return;
+        }
+        mensagem("Planilha exportada com sucesso.");
+    }
+    catch (const pqxx::sql_error &erroBanco)
+    {
+        erroSql(erroBanco, "exportar a planilha");
+    }
+    catch (const std::exception &)
+    {
+        erro("Não foi possível exportar a planilha. Verifique a conexão com o banco.");
+    }
+}
+
+void ViewViagens::gerarPdf()
+{
+    if (viagemId == 0)
+    {
+        erro("Selecione uma viagem antes de gerar o PDF.");
+        return;
+    }
+
+    try
+    {
+        const auto relatorio = viagens.gerarRelatorioViagem(viagemId);
+        if (!relatorio.has_value())
+        {
+            erro("A viagem selecionada não foi encontrada.");
+            return;
+        }
+
+        QString caminho = QFileDialog::getSaveFileName(
+            this, "Salvar relatório em PDF", "relatorio_viagem_" + QString::number(viagemId) + ".pdf",
+            "Documento PDF (*.pdf)");
+        if (caminho.isEmpty())
+            return;
+        if (!caminho.endsWith(".pdf", Qt::CaseInsensitive))
+            caminho += ".pdf";
+
+        QString motivo;
+        if (!ReportExporter::exportarPdf(*relatorio, caminho, &motivo))
+        {
+            erro(motivo);
+            return;
+        }
+        mensagem("PDF gerado com sucesso.");
+    }
+    catch (const pqxx::sql_error &erroBanco)
+    {
+        erroSql(erroBanco, "gerar o PDF");
+    }
+    catch (const std::exception &)
+    {
+        erro("Não foi possível gerar o PDF. Verifique a conexão com o banco.");
+    }
 }

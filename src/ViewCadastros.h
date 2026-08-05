@@ -2,6 +2,7 @@
 
 #include <QWidget>
 #include "AcompanhanteRepository.h"
+#include "AuxiliarRepository.h"
 #include "Motoristarepository.h"
 #include "VeiculoRepository.h"
 
@@ -30,6 +31,7 @@ private slots:
 private:
     Ui::ViewCadastros *ui;
     AcompanhanteRepository acompanhantes;
+    AuxiliarRepository auxiliares;
     MotoristaRepository motoristas;
     VeiculoRepository veiculos;
     int selecionadoId = 0;
