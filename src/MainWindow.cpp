@@ -1,14 +1,20 @@
 #include "MainWindow.h"
+#include "AppTheme.h"
 #include "ViewCadastros.h"
 #include "ViewInicio.h"
 #include "ViewPacientesMenu.h"
 #include "ViewRelatorios.h"
 #include "ViewViagens.h"
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QMessageBox>
 #include <QStatusBar>
+#include <QVBoxLayout>
+
 MainWindow::MainWindow(Database &db, QWidget *p) : QMainWindow(p), m_db(db)
 {
     setWindowTitle("Sistema de Logística — Prefeitura de Piranga");
+    setWindowIcon(AppTheme::appIcon());
     resize(1120, 800);
     try
     {
@@ -21,10 +27,59 @@ MainWindow::MainWindow(Database &db, QWidget *p) : QMainWindow(p), m_db(db)
     }
     configurarInterface();
 }
+
+QWidget *MainWindow::construirCabecalho()
+{
+    auto *cabecalho = new QWidget(this);
+    cabecalho->setObjectName("appHeaderBar");
+    cabecalho->setFixedHeight(64);
+
+    auto *layout = new QHBoxLayout(cabecalho);
+    layout->setContentsMargins(22, 8, 22, 8);
+    layout->setSpacing(14);
+
+    auto *logo = new QLabel(cabecalho);
+    logo->setPixmap(AppTheme::logoPixmap(48));
+    logo->setFixedSize(96, 48);
+    logo->setScaledContents(false);
+    layout->addWidget(logo, 0, Qt::AlignVCenter);
+
+    auto *blocoTitulo = new QWidget(cabecalho);
+    auto *layoutTitulo = new QVBoxLayout(blocoTitulo);
+    layoutTitulo->setContentsMargins(0, 0, 0, 0);
+    layoutTitulo->setSpacing(1);
+    auto *titulo = new QLabel("Sistema de Logística de Saúde", blocoTitulo);
+    titulo->setObjectName("appHeaderTitulo");
+    auto *subtitulo = new QLabel("Prefeitura de Piranga · Tratamento Fora de Domicílio", blocoTitulo);
+    subtitulo->setObjectName("appHeaderSubtitulo");
+    layoutTitulo->addWidget(titulo);
+    layoutTitulo->addWidget(subtitulo);
+    layout->addWidget(blocoTitulo, 0, Qt::AlignVCenter);
+
+    layout->addStretch();
+
+    auto *selo = new QLabel("Developed by Kayke", cabecalho);
+    selo->setObjectName("appHeaderSelo");
+    layout->addWidget(selo, 0, Qt::AlignVCenter);
+
+    return cabecalho;
+}
+
 void MainWindow::configurarInterface()
 {
-    m_stackTelas = new QStackedWidget(this);
-    setCentralWidget(m_stackTelas);
+    auto *containerCentral = new QWidget(this);
+    auto *layoutCentral = new QVBoxLayout(containerCentral);
+    layoutCentral->setContentsMargins(0, 0, 0, 0);
+    layoutCentral->setSpacing(0);
+    layoutCentral->addWidget(construirCabecalho());
+
+    m_stackTelas = new QStackedWidget(containerCentral);
+    layoutCentral->addWidget(m_stackTelas);
+    setCentralWidget(containerCentral);
+
+    auto *rodapeStatus = new QLabel("Developed by Kayke", this);
+    statusBar()->addPermanentWidget(rodapeStatus);
+
     m_telaInicio = new ViewInicio(this);
     m_telaMenuPacientes = new ViewPacientesMenu(this);
     m_telaPacientesCadastrar = new ViewPacientes(m_db, ModoPaciente::Cadastrar, this);

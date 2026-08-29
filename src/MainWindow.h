@@ -2,6 +2,7 @@
 
 #include <QMainWindow>
 #include <QStackedWidget>
+#include <QWidget>
 
 #include "Database.h"
 #include "ViewPacientes.h"
@@ -40,4 +41,5 @@ private:
     ViewRelatorios *m_telaRelatorios{};
 
     void configurarInterface();
+    QWidget *construirCabecalho();
 };

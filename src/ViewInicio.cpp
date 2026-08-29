@@ -1,49 +1,174 @@
 #include "ViewInicio.h"
+#include "AppTheme.h"
+#include <QColor>
+#include <QGraphicsDropShadowEffect>
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QVBoxLayout>
+
+namespace
+{
+    QPushButton *criarCartao(QWidget *pai, const QString &emoji, const QString &titulo,
+                             const QString &descricao, const QString &corTopo, const QString &corTopoHover)
+    {
+        auto *botao = new QPushButton(pai);
+        botao->setCursor(Qt::PointingHandCursor);
+        botao->setMinimumSize(250, 156);
+
+        // O conteúdo visual do cartão vem de um layout próprio (ícone,
+        // título e descrição em labels), não do texto plano do botão.
+        auto *layout = new QVBoxLayout(botao);
+        layout->setContentsMargins(22, 20, 20, 18);
+        layout->setSpacing(6);
+
+        auto *lblEmoji = new QLabel(emoji, botao);
+        lblEmoji->setStyleSheet("font-size:30px; background:transparent;");
+        lblEmoji->setAttribute(Qt::WA_TransparentForMouseEvents);
+
+        auto *lblTitulo = new QLabel(titulo, botao);
+        lblTitulo->setStyleSheet("font-size:17px; font-weight:800; color:#0B2545; background:transparent;");
+        lblTitulo->setAttribute(Qt::WA_TransparentForMouseEvents);
+
+        auto *lblDescricao = new QLabel(descricao, botao);
+        lblDescricao->setWordWrap(true);
+        lblDescricao->setStyleSheet("font-size:12px; font-weight:600; color:#5A6B7A; background:transparent;");
+        lblDescricao->setAttribute(Qt::WA_TransparentForMouseEvents);
+
+        layout->addWidget(lblEmoji);
+        layout->addWidget(lblTitulo);
+        layout->addWidget(lblDescricao);
+        layout->addStretch();
+
+        botao->setStyleSheet(QString(R"(
+            QPushButton {
+                background: #ffffff;
+                border: 1px solid #DCE4EC;
+                border-top: 4px solid %1;
+                border-radius: 16px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                border-top: 4px solid %2;
+                background: #FAFCFE;
+            }
+            QPushButton:pressed {
+                background: #F1F5F9;
+            }
+        )")
+                                 .arg(corTopo, corTopoHover));
+
+        auto *sombra = new QGraphicsDropShadowEffect(botao);
+        sombra->setBlurRadius(24);
+        sombra->setOffset(0, 6);
+        sombra->setColor(QColor(11, 37, 69, 35));
+        botao->setGraphicsEffect(sombra);
+
+        return botao;
+    }
+}
+
 ViewInicio::ViewInicio(QWidget *parent) : QWidget(parent) { configurarInterface(); }
+
 void ViewInicio::configurarInterface()
 {
     auto *principal = new QVBoxLayout(this);
-    principal->setContentsMargins(64, 56, 64, 56);
-    principal->setSpacing(18);
-    auto *marca = new QLabel("PREFEITURA DE PIRANGA", this);
-    marca->setAlignment(Qt::AlignCenter);
-    marca->setStyleSheet("color:#2e6fbb;font-weight:700;letter-spacing:1px;");
-    principal->addWidget(marca);
-    auto *titulo = new QLabel("Logística de Saúde", this);
-    titulo->setAlignment(Qt::AlignCenter);
-    titulo->setStyleSheet("font-size:34px;font-weight:800;color:#102a43;");
-    principal->addWidget(titulo);
-    auto *sub = new QLabel("Tratamento Fora de Domicílio • organização segura de pacientes, transportes e relatórios", this);
-    sub->setAlignment(Qt::AlignCenter);
+    principal->setContentsMargins(56, 40, 56, 32);
+    principal->setSpacing(28);
+
+    // ---------------------------------------------------------------
+    // Faixa "hero": gradiente com as cores oficiais da Prefeitura de
+    // Piranga (verde -> azul) e a logo em destaque.
+    // ---------------------------------------------------------------
+    auto *hero = new QWidget(this);
+    hero->setObjectName("heroInicio");
+    hero->setMinimumHeight(190);
+    hero->setStyleSheet(QString(R"(
+        QWidget#heroInicio {
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                stop:0 %1, stop:0.55 %1, stop:0.55 %2, stop:1 %2);
+            border-radius: 20px;
+        }
+    )")
+                            .arg(AppTheme::Verde, AppTheme::Azul));
+
+    auto *sombraHero = new QGraphicsDropShadowEffect(hero);
+    sombraHero->setBlurRadius(32);
+    sombraHero->setOffset(0, 10);
+    sombraHero->setColor(QColor(11, 37, 69, 60));
+    hero->setGraphicsEffect(sombraHero);
+
+    auto *layoutHero = new QHBoxLayout(hero);
+    layoutHero->setContentsMargins(40, 28, 40, 28);
+    layoutHero->setSpacing(28);
+
+    auto *logoHero = new QLabel(hero);
+    logoHero->setPixmap(AppTheme::logoPixmap(96));
+    logoHero->setFixedSize(192, 96);
+    layoutHero->addWidget(logoHero, 0, Qt::AlignVCenter);
+
+    auto *textoHero = new QWidget(hero);
+    auto *layoutTextoHero = new QVBoxLayout(textoHero);
+    layoutTextoHero->setContentsMargins(0, 0, 0, 0);
+    layoutTextoHero->setSpacing(6);
+
+    auto *marca = new QLabel("PREFEITURA DE PIRANGA  •  UM NOVO TEMPO", textoHero);
+    marca->setStyleSheet("color:rgba(255,255,255,0.85); font-weight:800; letter-spacing:1.5px; font-size:11px; background:transparent;");
+    layoutTextoHero->addWidget(marca);
+
+    auto *titulo = new QLabel("Logística de Saúde", textoHero);
+    titulo->setStyleSheet("font-size:32px; font-weight:800; color:#ffffff; background:transparent;");
+    layoutTextoHero->addWidget(titulo);
+
+    auto *sub = new QLabel("Tratamento Fora de Domicílio — organização segura de pacientes, transportes e relatórios", textoHero);
     sub->setWordWrap(true);
-    sub->setStyleSheet("color:#52606d;font-size:15px;");
-    principal->addWidget(sub);
-    principal->addSpacing(24);
+    sub->setStyleSheet("color:rgba(255,255,255,0.92); font-size:14px; font-weight:600; background:transparent;");
+    layoutTextoHero->addWidget(sub);
+
+    layoutTextoHero->addStretch();
+    layoutHero->addWidget(textoHero, 1);
+    principal->addWidget(hero);
+
+    // ---------------------------------------------------------------
+    // Cartões de navegação
+    // ---------------------------------------------------------------
     auto *grade = new QGridLayout();
-    grade->setHorizontalSpacing(20);
-    grade->setVerticalSpacing(20);
-    auto criar = [this](const QString &t, const QString &d, const QString &cor)
-    {auto*b=new QPushButton(t+"\n"+d,this);b->setMinimumSize(260,140);b->setCursor(Qt::PointingHandCursor);b->setStyleSheet(QString("QPushButton{background:%1;color:white;border:0;border-radius:14px;text-align:left;padding:20px;font-size:19px;font-weight:700;}QPushButton:hover{background:#102a43;}").arg(cor));return b; };
-    auto *p = criar("Pacientes", "Cadastros e consultas", "#2e6fbb");
-    auto *v = criar("Viagens", "Planejar e acompanhar", "#15803d");
-    auto *r = criar("Relatórios", "Histórico e mapas", "#7c3aed");
-    auto *c = criar("Cadastros auxiliares", "Motoristas, veículos e acompanhantes", "#d97706");
+    grade->setHorizontalSpacing(22);
+    grade->setVerticalSpacing(22);
+
+    auto *p = criarCartao(this, QString::fromUtf8("\xF0\x9F\xA9\xBA"), "Pacientes",
+                          "Cadastros, buscas e atualização de dados dos pacientes atendidos.",
+                          AppTheme::Azul, AppTheme::AzulEscuro);
+    auto *v = criarCartao(this, QString::fromUtf8("\xF0\x9F\x9A\x90"), "Viagens",
+                          "Planeje viagens, monte a lista de passageiros e acompanhe cada saída.",
+                          AppTheme::Verde, AppTheme::VerdeEscuro);
+    auto *r = criarCartao(this, QString::fromUtf8("\xF0\x9F\x93\x8A"), "Relatórios",
+                          "Histórico por paciente, volume de passageiros e mapa diário de viagens.",
+                          AppTheme::Azul, AppTheme::AzulEscuro);
+    auto *c = criarCartao(this, QString::fromUtf8("\xF0\x9F\x93\x87"), "Cadastros auxiliares",
+                          "Motoristas, veículos, acompanhantes e auxiliares de viagem.",
+                          AppTheme::Verde, AppTheme::VerdeEscuro);
+
     connect(p, &QPushButton::clicked, this, &ViewInicio::pacientesSelecionado);
     connect(v, &QPushButton::clicked, this, &ViewInicio::viagensSelecionado);
     connect(r, &QPushButton::clicked, this, &ViewInicio::relatoriosSelecionado);
     connect(c, &QPushButton::clicked, this, &ViewInicio::cadastrosSelecionado);
+
     grade->addWidget(p, 0, 0);
     grade->addWidget(v, 0, 1);
     grade->addWidget(r, 1, 0);
     grade->addWidget(c, 1, 1);
     principal->addLayout(grade);
     principal->addStretch();
-    auto *rodape = new QLabel("Sistema interno • Dados de saúde exigem atenção e conferência antes de salvar.", this);
+
+    // ---------------------------------------------------------------
+    // Rodapé
+    // ---------------------------------------------------------------
+    auto *rodape = new QLabel(
+        "Sistema interno • Dados de saúde exigem atenção e conferência antes de salvar.  ·  Developed by Kayke",
+        this);
     rodape->setAlignment(Qt::AlignCenter);
-    rodape->setStyleSheet("color:#7b8794;");
+    rodape->setStyleSheet("color:#8492A6; font-weight:600; background:transparent;");
     principal->addWidget(rodape);
 }
