@@ -192,19 +192,19 @@ void ViewPacientes::selecionarPaciente(const Paciente &paciente)
         habilitarCamposEdicao(true);
         ui->btnAtualizar->setEnabled(true);
         ui->txtNome->setFocus();
-        ui->labelMensagem->setStyleSheet("color: #0f5132;");
+        ui->labelMensagem->setStyleSheet("color: #00722A;");
         ui->labelMensagem->setText("Cadastro carregado. Revise os dados e confirme a atualização.");
     }
     else if (m_modo == ModoPaciente::Excluir)
     {
         habilitarCamposEdicao(false);
         ui->btnDeletar->setEnabled(true);
-        ui->labelMensagem->setStyleSheet("color: #8a1c1c;");
+        ui->labelMensagem->setStyleSheet("color: #8E2A20;");
         ui->labelMensagem->setText("Confira os dados. A exclusão não poderá ser desfeita.");
     }
     else if (m_modo == ModoPaciente::Consultar)
     {
-        ui->labelMensagem->setStyleSheet("color: #0f5132;");
+        ui->labelMensagem->setStyleSheet("color: #00722A;");
         ui->labelMensagem->setText("Cadastro encontrado.");
     }
 }
@@ -260,7 +260,7 @@ void ViewPacientes::limparFormulario()
 
 void ViewPacientes::exibirMensagemValidacao(const QString &mensagem, QWidget *campo)
 {
-    ui->labelMensagem->setStyleSheet("color: #b42318;");
+    ui->labelMensagem->setStyleSheet("color: #C0392B;");
     ui->labelMensagem->setText(mensagem);
     if (campo)
         campo->setFocus();
@@ -269,7 +269,7 @@ void ViewPacientes::exibirMensagemValidacao(const QString &mensagem, QWidget *ca
 void ViewPacientes::limparMensagemValidacao()
 {
     ui->labelMensagem->clear();
-    ui->labelMensagem->setStyleSheet("color: #475467;");
+    ui->labelMensagem->setStyleSheet("color: #5A6B7A;");
 }
 
 bool ViewPacientes::validarDadosPaciente()
@@ -394,7 +394,7 @@ void ViewPacientes::buscarPaciente()
         }
 
         ui->tabelaResultados->setVisible(true);
-        ui->labelMensagem->setStyleSheet("color: #475467;");
+        ui->labelMensagem->setStyleSheet("color: #5A6B7A;");
         ui->labelMensagem->setText(m_resultadosBusca.size() == 20
                                        ? "Exibindo os 20 primeiros resultados. Refine a busca, se necessário."
                                        : "Selecione um paciente na tabela para ver o cadastro.");
@@ -434,7 +434,7 @@ void ViewPacientes::salvarPaciente()
 
         const int id = m_repo.cadastrar(paciente);
         prepararTela();
-        ui->labelMensagem->setStyleSheet("color: #0f5132;");
+        ui->labelMensagem->setStyleSheet("color: #00722A;");
         ui->labelMensagem->setText("Paciente cadastrado com sucesso. Código: " + QString::number(id) + ".");
     }
     catch (const pqxx::sql_error &erro)
@@ -479,7 +479,7 @@ void ViewPacientes::atualizarPaciente()
         }
 
         prepararTela();
-        ui->labelMensagem->setStyleSheet("color: #0f5132;");
+        ui->labelMensagem->setStyleSheet("color: #00722A;");
         ui->labelMensagem->setText("Cadastro atualizado com sucesso.");
     }
     catch (const pqxx::sql_error &erro)
@@ -525,7 +525,7 @@ void ViewPacientes::deletarPaciente()
         }
 
         prepararTela();
-        ui->labelMensagem->setStyleSheet("color: #0f5132;");
+        ui->labelMensagem->setStyleSheet("color: #00722A;");
         ui->labelMensagem->setText("Cadastro excluído com sucesso.");
     }
     catch (const pqxx::sql_error &erro)

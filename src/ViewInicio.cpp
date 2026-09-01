@@ -1,7 +1,5 @@
 #include "ViewInicio.h"
 #include "AppTheme.h"
-#include <QColor>
-#include <QGraphicsDropShadowEffect>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -59,11 +57,10 @@ namespace
         )")
                                  .arg(corTopo, corTopoHover));
 
-        auto *sombra = new QGraphicsDropShadowEffect(botao);
-        sombra->setBlurRadius(24);
-        sombra->setOffset(0, 6);
-        sombra->setColor(QColor(11, 37, 69, 35));
-        botao->setGraphicsEffect(sombra);
+        // Observação: já usamos QGraphicsDropShadowEffect aqui antes, mas em
+        // Windows com escala de tela (DPI) fracionária esse efeito borra o
+        // conteúdo interno do botão (texto some/vira serrilhado). A borda
+        // colorida acima já dá a sensação de profundidade sem esse risco.
 
         return botao;
     }
@@ -93,12 +90,6 @@ void ViewInicio::configurarInterface()
     )")
                             .arg(AppTheme::Verde, AppTheme::Azul));
 
-    auto *sombraHero = new QGraphicsDropShadowEffect(hero);
-    sombraHero->setBlurRadius(32);
-    sombraHero->setOffset(0, 10);
-    sombraHero->setColor(QColor(11, 37, 69, 60));
-    hero->setGraphicsEffect(sombraHero);
-
     auto *layoutHero = new QHBoxLayout(hero);
     layoutHero->setContentsMargins(40, 28, 40, 28);
     layoutHero->setSpacing(28);
@@ -109,6 +100,7 @@ void ViewInicio::configurarInterface()
     layoutHero->addWidget(logoHero, 0, Qt::AlignVCenter);
 
     auto *textoHero = new QWidget(hero);
+    textoHero->setStyleSheet("background: transparent;");
     auto *layoutTextoHero = new QVBoxLayout(textoHero);
     layoutTextoHero->setContentsMargins(0, 0, 0, 0);
     layoutTextoHero->setSpacing(6);

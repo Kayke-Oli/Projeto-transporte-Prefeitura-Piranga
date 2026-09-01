@@ -203,20 +203,20 @@ int main(int argc, char *argv[])
         }
         QMessageBox { background: %5; }
     )")
-                        .arg(AppTheme::FundoPagina)  // %1 fundo geral da janela
-                        .arg(AppTheme::Tinta)        // %2 texto/status bar
-                        .arg(AppTheme::Verde)        // %3 verde institucional
-                        .arg(AppTheme::Azul)         // %4 azul institucional (cor primária)
-                        .arg(AppTheme::Cartao)       // %5 branco dos cartões/campos
-                        .arg(AppTheme::Borda)        // %6 borda neutra
-                        .arg(AppTheme::Tinta)        // %7 texto padrão
-                        .arg(AppTheme::AzulClaro)    // %8 azul claro (hover/seleção)
-                        .arg(AppTheme::AzulEscuro)   // %9 azul escuro (hover botão primário)
-                        .arg(AppTheme::AzulEscuro)   // %10 azul escuro (pressed)
-                        .arg(AppTheme::Perigo)       // %11 vermelho (excluir)
-                        .arg(AppTheme::PerigoEscuro) // %12 vermelho escuro (hover excluir)
-                        .arg(AppTheme::FundoPagina)  // %13 linha alternada da tabela
-                        .arg(AppTheme::AzulClaro));  // %14 cabeçalho de tabela/aba
+        .arg(AppTheme::FundoPagina)   // %1 fundo geral da janela
+        .arg(AppTheme::Tinta)         // %2 texto/status bar
+        .arg(AppTheme::Verde)         // %3 verde institucional
+        .arg(AppTheme::Azul)          // %4 azul institucional (cor primária)
+        .arg(AppTheme::Cartao)        // %5 branco dos cartões/campos
+        .arg(AppTheme::Borda)         // %6 borda neutra
+        .arg(AppTheme::Tinta)         // %7 texto padrão
+        .arg(AppTheme::AzulClaro)     // %8 azul claro (hover/seleção)
+        .arg(AppTheme::AzulEscuro)    // %9 azul escuro (hover botão primário)
+        .arg(AppTheme::AzulEscuro)    // %10 azul escuro (pressed)
+        .arg(AppTheme::Perigo)        // %11 vermelho (excluir)
+        .arg(AppTheme::PerigoEscuro)  // %12 vermelho escuro (hover excluir)
+        .arg(AppTheme::FundoPagina)   // %13 linha alternada da tabela
+        .arg(AppTheme::AzulClaro));   // %14 cabeçalho de tabela/aba
 
     std::unique_ptr<Database> db;
     try

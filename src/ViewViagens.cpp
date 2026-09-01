@@ -145,13 +145,13 @@ void ViewViagens::configurarMascaras()
 
 void ViewViagens::mensagem(const QString &texto)
 {
-    ui->lblMensagem->setStyleSheet("color:#0f5132;");
+    ui->lblMensagem->setStyleSheet("color:#00722A;");
     ui->lblMensagem->setText(texto);
 }
 
 void ViewViagens::erro(const QString &texto)
 {
-    ui->lblMensagem->setStyleSheet("color:#b42318;");
+    ui->lblMensagem->setStyleSheet("color:#C0392B;");
     ui->lblMensagem->setText(texto);
 }
 
@@ -513,13 +513,11 @@ void ViewViagens::adicionarPassageiro()
 
 void ViewViagens::desenharPassageiros()
 {
-    std::sort(passageiros.begin(), passageiros.end(), [](const PassageiroViagemDetalhe &esquerda,
-                                                         const PassageiroViagemDetalhe &direita)
+    std::sort(passageiros.begin(), passageiros.end(), [](const PassageiroViagemDetalhe &esquerda, const PassageiroViagemDetalhe &direita)
               {
                   const int comparacao = QString::localeAwareCompare(QString::fromStdString(esquerda.pacienteNome),
                                                                        QString::fromStdString(direita.pacienteNome));
-                  return comparacao == 0 ? esquerda.pacienteCpf < direita.pacienteCpf : comparacao < 0;
-              });
+                  return comparacao == 0 ? esquerda.pacienteCpf < direita.pacienteCpf : comparacao < 0; });
     ui->tblPassageiros->setRowCount(static_cast<int>(passageiros.size()));
     for (int linha = 0; linha < static_cast<int>(passageiros.size()); ++linha)
     {

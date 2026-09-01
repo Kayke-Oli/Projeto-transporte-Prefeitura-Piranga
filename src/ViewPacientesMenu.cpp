@@ -1,7 +1,5 @@
 #include "ViewPacientesMenu.h"
 #include "AppTheme.h"
-#include <QColor>
-#include <QGraphicsDropShadowEffect>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -52,11 +50,9 @@ namespace
         )")
                                          .arg(cor, corHover));
 
-                auto *sombra = new QGraphicsDropShadowEffect(botao);
-                sombra->setBlurRadius(20);
-                sombra->setOffset(0, 5);
-                sombra->setColor(QColor(11, 37, 69, 30));
-                botao->setGraphicsEffect(sombra);
+                // Sem QGraphicsDropShadowEffect de propósito: em Windows com escala
+                // de tela fracionária esse efeito borra o conteúdo interno do botão.
+                // A borda colorida acima já dá a sensação de profundidade.
 
                 return botao;
         }
@@ -84,6 +80,7 @@ void ViewPacientesMenu::configurarInterface()
         layoutPrincipal->addLayout(layoutTopo);
 
         auto *bloco = new QWidget(this);
+        bloco->setStyleSheet("background: transparent;");
         auto *layoutBloco = new QVBoxLayout(bloco);
         layoutBloco->setContentsMargins(0, 0, 0, 0);
         layoutBloco->setSpacing(4);

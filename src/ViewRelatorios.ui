@@ -4,66 +4,218 @@
  <widget class="QWidget" name="ViewRelatorios">
   <layout class="QVBoxLayout" name="v">
    <property name="leftMargin"><number>32</number></property>
-   <property name="topMargin"><number>24</number></property>
+   <property name="topMargin"><number>26</number></property>
    <property name="rightMargin"><number>32</number></property>
+   <property name="bottomMargin"><number>26</number></property>
+   <property name="spacing"><number>16</number></property>
    <item>
-    <layout class="QHBoxLayout" name="t">
-     <item><widget class="QPushButton" name="btnVoltar"><property name="text"><string>&lt; Voltar</string></property></widget></item>
-     <item><widget class="QLabel" name="title"><property name="text"><string>Relat&#243;rios operacionais</string></property><property name="styleSheet"><string notr="true">font-size:24px;font-weight:700;</string></property></widget></item>
-    </layout>
+    <widget class="QWidget" name="cabecalho">
+     <property name="minimumHeight"><number>92</number></property>
+     <property name="maximumHeight"><number>92</number></property>
+     <property name="styleSheet"><string notr="true">QWidget#cabecalho {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #004082, stop:1 #00305F);
+    border-radius: 18px;
+}</string></property>
+     <layout class="QHBoxLayout" name="layoutCabecalho">
+      <property name="leftMargin"><number>26</number></property>
+      <property name="topMargin"><number>14</number></property>
+      <property name="rightMargin"><number>26</number></property>
+      <property name="bottomMargin"><number>14</number></property>
+      <property name="spacing"><number>18</number></property>
+      <item>
+       <widget class="QPushButton" name="btnVoltar">
+        <property name="maximumSize"><size><width>104</width><height>16777215</height></size></property>
+        <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+        <property name="styleSheet"><string notr="true">QPushButton {
+    background: rgba(255, 255, 255, 40);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 110);
+    border-radius: 9px;
+    padding: 8px 14px;
+    font-weight: 700;
+}
+QPushButton:hover { background: rgba(255, 255, 255, 75); }</string></property>
+        <property name="text"><string>← Voltar</string></property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="blocoTitulo">
+        <property name="spacing"><number>2</number></property>
+        <item>
+         <widget class="QLabel" name="title">
+          <property name="styleSheet"><string notr="true">color:#ffffff; font-size:20px; font-weight:800; background:transparent;</string></property>
+          <property name="text"><string>📊  Relatórios operacionais</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="subtitulo">
+          <property name="styleSheet"><string notr="true">color:rgba(255,255,255,0.88); font-size:12px; font-weight:600; background:transparent;</string></property>
+          <property name="text"><string>Histórico de pacientes, volume de passageiros e mapa diário de viagens</string></property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="spacerCabecalho">
+        <property name="orientation"><enum>Qt::Horizontal</enum></property>
+        <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QTabWidget" name="tabs">
      <widget class="QWidget" name="tabRelatorioViagem">
-      <attribute name="title"><string>Relat&#243;rio da viagem</string></attribute>
+      <attribute name="title"><string>🧾  Relatório da viagem</string></attribute>
       <layout class="QVBoxLayout" name="vr">
+       <property name="spacing"><number>14</number></property>
        <item><widget class="QLabel" name="lblExplicacaoRelatorio"><property name="text"><string>Selecione a data e o destino da viagem para gerar a lista de passageiros.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
        <item>
-        <layout class="QFormLayout" name="fr">
-         <item row="0" column="0"><widget class="QLabel" name="lDataRelatorio"><property name="text"><string>Data da viagem</string></property></widget></item>
-         <item row="0" column="1"><widget class="QDateEdit" name="dtRelatorioViagem"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item>
-         <item row="1" column="0"><widget class="QLabel" name="lDestinoRelatorio"><property name="text"><string>Destino</string></property></widget></item>
-         <item row="1" column="1"><widget class="QComboBox" name="cmbDestinoRelatorio"/></item>
-        </layout>
+        <widget class="QGroupBox" name="grupoRelatorioViagem">
+         <property name="title"><string>Selecionar viagem</string></property>
+         <layout class="QFormLayout" name="fr">
+          <property name="horizontalSpacing"><number>16</number></property>
+          <property name="verticalSpacing"><number>11</number></property>
+          <property name="labelAlignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+          <item row="0" column="0"><widget class="QLabel" name="lDataRelatorio"><property name="text"><string>Data da viagem</string></property></widget></item>
+          <item row="0" column="1"><widget class="QDateEdit" name="dtRelatorioViagem"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item>
+          <item row="1" column="0"><widget class="QLabel" name="lDestinoRelatorio"><property name="text"><string>Destino</string></property></widget></item>
+          <item row="1" column="1"><widget class="QComboBox" name="cmbDestinoRelatorio"/></item>
+         </layout>
+        </widget>
        </item>
        <item>
         <layout class="QHBoxLayout" name="ar">
-         <item><widget class="QPushButton" name="btnExportarPlanilhaViagem"><property name="text"><string>Exportar planilha</string></property></widget></item>
-         <item><widget class="QPushButton" name="btnGerarPdfViagem"><property name="text"><string>Gerar PDF</string></property></widget></item>
+         <item><widget class="QPushButton" name="btnExportarPlanilhaViagem"><property name="text"><string>📄  Exportar planilha</string></property></widget></item>
+         <item><widget class="QPushButton" name="btnGerarPdfViagem"><property name="text"><string>🖨️  Gerar PDF</string></property></widget></item>
+         <item>
+          <spacer name="spacerRelatorioBotoes">
+           <property name="orientation"><enum>Qt::Horizontal</enum></property>
+           <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+          </spacer>
+         </item>
         </layout>
        </item>
        <item><spacer name="spacerRelatorio"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
       </layout>
      </widget>
      <widget class="QWidget" name="tabH">
-      <attribute name="title"><string>Hist&#243;rico do paciente</string></attribute>
+      <attribute name="title"><string>🕘  Histórico do paciente</string></attribute>
       <layout class="QVBoxLayout" name="vh">
-       <item><layout class="QHBoxLayout" name="bh"><item><widget class="QLineEdit" name="txtCpfHistorico"><property name="placeholderText"><string>CPF do paciente</string></property></widget></item><item><widget class="QPushButton" name="btnHistorico"><property name="text"><string>Gerar hist&#243;rico</string></property></widget></item></layout></item>
-       <item><widget class="QTableWidget" name="tblHistorico"><property name="columnCount"><number>4</number></property><property name="rowCount"><number>0</number></property></widget></item>
+       <property name="spacing"><number>14</number></property>
+       <item>
+        <layout class="QHBoxLayout" name="bh">
+         <item><widget class="QLineEdit" name="txtCpfHistorico"><property name="placeholderText"><string>CPF do paciente</string></property></widget></item>
+         <item><widget class="QPushButton" name="btnHistorico"><property name="text"><string>🔍  Gerar histórico</string></property></widget></item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="tblHistorico">
+         <property name="columnCount"><number>4</number></property>
+         <property name="rowCount"><number>0</number></property>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tabV">
-      <attribute name="title"><string>Volume</string></attribute>
+      <attribute name="title"><string>👥  Volume</string></attribute>
       <layout class="QVBoxLayout" name="vv">
-       <item><layout class="QHBoxLayout" name="bv"><item><widget class="QDateEdit" name="dtInicio"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item><item><widget class="QDateEdit" name="dtFim"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item><item><widget class="QPushButton" name="btnVolume"><property name="text"><string>Calcular</string></property></widget></item></layout></item>
-       <item><widget class="QLabel" name="l1"><property name="text"><string>Pacientes</string></property></widget></item>
-       <item><widget class="QLabel" name="lblPacientes"><property name="text"><string>0</string></property><property name="styleSheet"><string notr="true">font-size:28px;font-weight:700;</string></property></widget></item>
-       <item><widget class="QLabel" name="l2"><property name="text"><string>Acompanhantes</string></property></widget></item>
-       <item><widget class="QLabel" name="lblAcompanhantes"><property name="text"><string>0</string></property><property name="styleSheet"><string notr="true">font-size:28px;font-weight:700;</string></property></widget></item>
-       <item><widget class="QLabel" name="l3"><property name="text"><string>Total de pessoas</string></property></widget></item>
-       <item><widget class="QLabel" name="lblPessoas"><property name="text"><string>0</string></property><property name="styleSheet"><string notr="true">font-size:28px;font-weight:700;</string></property></widget></item>
+       <property name="spacing"><number>16</number></property>
+       <item>
+        <layout class="QHBoxLayout" name="bv">
+         <item><widget class="QDateEdit" name="dtInicio"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item>
+         <item><widget class="QDateEdit" name="dtFim"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item>
+         <item><widget class="QPushButton" name="btnVolume"><property name="text"><string>📈  Calcular</string></property></widget></item>
+         <item>
+          <spacer name="spacerVolumeBotoes">
+           <property name="orientation"><enum>Qt::Horizontal</enum></property>
+           <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="cartoesVolume">
+         <property name="spacing"><number>16</number></property>
+         <item>
+          <widget class="QFrame" name="cartaoPacientes">
+           <property name="styleSheet"><string notr="true">QFrame#cartaoPacientes { background:#ffffff; border:1px solid #DCE4EC; border-top:4px solid #004082; border-radius:14px; }</string></property>
+           <layout class="QVBoxLayout" name="lcp">
+            <property name="leftMargin"><number>18</number></property>
+            <property name="topMargin"><number>16</number></property>
+            <property name="rightMargin"><number>18</number></property>
+            <property name="bottomMargin"><number>16</number></property>
+            <property name="spacing"><number>4</number></property>
+            <item><widget class="QLabel" name="l1"><property name="styleSheet"><string notr="true">color:#5A6B7A; font-weight:700; font-size:11.5px; background:transparent;</string></property><property name="text"><string>🩺  Pacientes</string></property></widget></item>
+            <item><widget class="QLabel" name="lblPacientes"><property name="styleSheet"><string notr="true">color:#004082; font-size:32px; font-weight:800; background:transparent;</string></property><property name="text"><string>0</string></property></widget></item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QFrame" name="cartaoAcompanhantes">
+           <property name="styleSheet"><string notr="true">QFrame#cartaoAcompanhantes { background:#ffffff; border:1px solid #DCE4EC; border-top:4px solid #009331; border-radius:14px; }</string></property>
+           <layout class="QVBoxLayout" name="lca">
+            <property name="leftMargin"><number>18</number></property>
+            <property name="topMargin"><number>16</number></property>
+            <property name="rightMargin"><number>18</number></property>
+            <property name="bottomMargin"><number>16</number></property>
+            <property name="spacing"><number>4</number></property>
+            <item><widget class="QLabel" name="l2"><property name="styleSheet"><string notr="true">color:#5A6B7A; font-weight:700; font-size:11.5px; background:transparent;</string></property><property name="text"><string>🧑‍🤝‍🧑  Acompanhantes</string></property></widget></item>
+            <item><widget class="QLabel" name="lblAcompanhantes"><property name="styleSheet"><string notr="true">color:#009331; font-size:32px; font-weight:800; background:transparent;</string></property><property name="text"><string>0</string></property></widget></item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QFrame" name="cartaoPessoas">
+           <property name="styleSheet"><string notr="true">QFrame#cartaoPessoas { background:#ffffff; border:1px solid #DCE4EC; border-top:4px solid #00305F; border-radius:14px; }</string></property>
+           <layout class="QVBoxLayout" name="lcpe">
+            <property name="leftMargin"><number>18</number></property>
+            <property name="topMargin"><number>16</number></property>
+            <property name="rightMargin"><number>18</number></property>
+            <property name="bottomMargin"><number>16</number></property>
+            <property name="spacing"><number>4</number></property>
+            <item><widget class="QLabel" name="l3"><property name="styleSheet"><string notr="true">color:#5A6B7A; font-weight:700; font-size:11.5px; background:transparent;</string></property><property name="text"><string>👤  Total de pessoas</string></property></widget></item>
+            <item><widget class="QLabel" name="lblPessoas"><property name="styleSheet"><string notr="true">color:#00305F; font-size:32px; font-weight:800; background:transparent;</string></property><property name="text"><string>0</string></property></widget></item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item><spacer name="spacerVolume"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
       </layout>
      </widget>
      <widget class="QWidget" name="tabM">
-      <attribute name="title"><string>Mapa di&#225;rio</string></attribute>
+      <attribute name="title"><string>🗺️  Mapa diário</string></attribute>
       <layout class="QVBoxLayout" name="vm">
-       <item><layout class="QHBoxLayout" name="bm"><item><widget class="QDateEdit" name="dtMapa"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item><item><widget class="QPushButton" name="btnMapa"><property name="text"><string>Gerar mapa</string></property></widget></item></layout></item>
-       <item><widget class="QPlainTextEdit" name="txtMapa"><property name="readOnly"><bool>true</bool></property></widget></item>
+       <property name="spacing"><number>14</number></property>
+       <item>
+        <layout class="QHBoxLayout" name="bm">
+         <item><widget class="QDateEdit" name="dtMapa"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item>
+         <item><widget class="QPushButton" name="btnMapa"><property name="text"><string>🗺️  Gerar mapa</string></property></widget></item>
+         <item>
+          <spacer name="spacerMapaBotoes">
+           <property name="orientation"><enum>Qt::Horizontal</enum></property>
+           <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QPlainTextEdit" name="txtMapa">
+         <property name="readOnly"><bool>true</bool></property>
+         <property name="styleSheet"><string notr="true">font-family:'Consolas','Courier New',monospace; font-size:11.5px;</string></property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </widget>
    </item>
-   <item><widget class="QLabel" name="lblMensagem"/></item>
+   <item>
+    <widget class="QLabel" name="lblMensagem">
+     <property name="styleSheet"><string notr="true">font-weight:700;</string></property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>

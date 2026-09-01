@@ -4,62 +4,158 @@
  <widget class="QWidget" name="ViewViagens">
   <layout class="QVBoxLayout" name="v">
    <property name="leftMargin"><number>32</number></property>
-   <property name="topMargin"><number>24</number></property>
+   <property name="topMargin"><number>26</number></property>
    <property name="rightMargin"><number>32</number></property>
+   <property name="bottomMargin"><number>26</number></property>
+   <property name="spacing"><number>16</number></property>
    <item>
-    <layout class="QHBoxLayout" name="top">
-     <item><widget class="QPushButton" name="btnVoltar"><property name="text"><string>&lt; Voltar</string></property></widget></item>
-     <item><widget class="QLabel" name="title"><property name="text"><string>Planejamento de viagens TFD</string></property><property name="styleSheet"><string notr="true">font-size:24px;font-weight:700;</string></property></widget></item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="gDados">
-     <property name="title"><string>Dados da viagem</string></property>
-     <layout class="QFormLayout" name="f1">
-      <item row="0" column="0"><widget class="QLabel" name="lData"><property name="text"><string>Data</string></property></widget></item>
-      <item row="0" column="1"><widget class="QDateEdit" name="dtViagem"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item>
-      <item row="1" column="0"><widget class="QLabel" name="lDest"><property name="text"><string>Destino</string></property></widget></item>
-      <item row="1" column="1"><widget class="QLineEdit" name="txtDestino"><property name="maxLength"><number>100</number></property></widget></item>
-      <item row="2" column="0"><widget class="QLabel" name="lVeic"><property name="text"><string>Ve&#237;culo</string></property></widget></item>
-      <item row="2" column="1"><widget class="QComboBox" name="cmbVeiculo"/></item>
-      <item row="3" column="0"><widget class="QLabel" name="lMot"><property name="text"><string>Motorista</string></property></widget></item>
-      <item row="3" column="1"><widget class="QComboBox" name="cmbMotorista"/></item>
-      <item row="4" column="0"><widget class="QLabel" name="lAux"><property name="text"><string>Auxiliar de viagem (opcional)</string></property></widget></item>
-      <item row="4" column="1"><widget class="QComboBox" name="cmbAuxiliar"/></item>
+    <widget class="QWidget" name="cabecalho">
+     <property name="minimumHeight"><number>92</number></property>
+     <property name="maximumHeight"><number>92</number></property>
+     <property name="styleSheet"><string notr="true">QWidget#cabecalho {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #009331, stop:1 #00722A);
+    border-radius: 18px;
+}</string></property>
+     <layout class="QHBoxLayout" name="layoutCabecalho">
+      <property name="leftMargin"><number>26</number></property>
+      <property name="topMargin"><number>14</number></property>
+      <property name="rightMargin"><number>26</number></property>
+      <property name="bottomMargin"><number>14</number></property>
+      <property name="spacing"><number>18</number></property>
+      <item>
+       <widget class="QPushButton" name="btnVoltar">
+        <property name="maximumSize"><size><width>104</width><height>16777215</height></size></property>
+        <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+        <property name="styleSheet"><string notr="true">QPushButton {
+    background: rgba(255, 255, 255, 40);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 110);
+    border-radius: 9px;
+    padding: 8px 14px;
+    font-weight: 700;
+}
+QPushButton:hover { background: rgba(255, 255, 255, 75); }</string></property>
+        <property name="text"><string>← Voltar</string></property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="blocoTitulo">
+        <property name="spacing"><number>2</number></property>
+        <item>
+         <widget class="QLabel" name="title">
+          <property name="styleSheet"><string notr="true">color:#ffffff; font-size:20px; font-weight:800; background:transparent;</string></property>
+          <property name="text"><string>🚐  Planejamento de viagens TFD</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="subtitulo">
+          <property name="styleSheet"><string notr="true">color:rgba(255,255,255,0.88); font-size:12px; font-weight:600; background:transparent;</string></property>
+          <property name="text"><string>Monte a lista de passageiros e organize o transporte do dia</string></property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="spacerCabecalho">
+        <property name="orientation"><enum>Qt::Horizontal</enum></property>
+        <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+       </spacer>
+      </item>
      </layout>
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="gPass">
-     <property name="title"><string>Pacientes e acompanhantes</string></property>
-     <layout class="QGridLayout" name="grid">
-      <item row="0" column="0"><widget class="QLineEdit" name="txtCpfPaciente"><property name="placeholderText"><string>CPF do paciente</string></property></widget></item>
-      <item row="0" column="1"><widget class="QPushButton" name="btnBuscarPaciente"><property name="text"><string>Buscar paciente</string></property></widget></item>
-      <item row="0" column="2" colspan="3"><widget class="QLabel" name="lblPaciente"/></item>
-      <item row="1" column="0"><widget class="QLabel" name="lAcompanhante"><property name="text"><string>Acompanhante (opcional)</string></property></widget></item>
-      <item row="1" column="1"><widget class="QLineEdit" name="txtNomeAcompanhante"><property name="placeholderText"><string>Nome</string></property><property name="maxLength"><number>150</number></property></widget></item>
-      <item row="1" column="2"><widget class="QLineEdit" name="txtCpfAcompanhante"><property name="placeholderText"><string>CPF</string></property><property name="maxLength"><number>14</number></property></widget></item>
-      <item row="1" column="3"><widget class="QLineEdit" name="txtTelefoneAcompanhante"><property name="placeholderText"><string>Telefone com DDD</string></property><property name="maxLength"><number>15</number></property></widget></item>
-      <item row="1" column="4"><widget class="QPushButton" name="btnVerificarAcompanhante"><property name="text"><string>Verificar acompanhante</string></property></widget></item>
-      <item row="2" column="1" colspan="4"><widget class="QLabel" name="lblAcompanhante"/></item>
-      <item row="3" column="0"><widget class="QPushButton" name="btnAdicionar"><property name="text"><string>Adicionar &#224; viagem</string></property></widget></item>
-      <item row="3" column="1"><widget class="QPushButton" name="btnRemover"><property name="text"><string>Remover selecionado</string></property></widget></item>
-      <item row="4" column="0" colspan="5"><widget class="QTableWidget" name="tblPassageiros"><property name="columnCount"><number>3</number></property><property name="rowCount"><number>0</number></property></widget></item>
-     </layout>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable"><bool>true</bool></property>
+     <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+     <widget class="QWidget" name="scrollAreaContents">
+      <layout class="QVBoxLayout" name="vScroll">
+       <property name="leftMargin"><number>0</number></property>
+       <property name="topMargin"><number>0</number></property>
+       <property name="rightMargin"><number>4</number></property>
+       <property name="bottomMargin"><number>0</number></property>
+       <property name="spacing"><number>16</number></property>
+       <item>
+        <widget class="QGroupBox" name="gDados">
+         <property name="title"><string>Dados da viagem</string></property>
+         <layout class="QFormLayout" name="f1">
+          <property name="horizontalSpacing"><number>16</number></property>
+          <property name="verticalSpacing"><number>11</number></property>
+          <property name="labelAlignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+          <item row="0" column="0"><widget class="QLabel" name="lData"><property name="text"><string>Data</string></property></widget></item>
+          <item row="0" column="1"><widget class="QDateEdit" name="dtViagem"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd-MM-yyyy</string></property></widget></item>
+          <item row="1" column="0"><widget class="QLabel" name="lDest"><property name="text"><string>Destino</string></property></widget></item>
+          <item row="1" column="1"><widget class="QLineEdit" name="txtDestino"><property name="maxLength"><number>100</number></property></widget></item>
+          <item row="2" column="0"><widget class="QLabel" name="lVeic"><property name="text"><string>Veículo</string></property></widget></item>
+          <item row="2" column="1"><widget class="QComboBox" name="cmbVeiculo"/></item>
+          <item row="3" column="0"><widget class="QLabel" name="lMot"><property name="text"><string>Motorista</string></property></widget></item>
+          <item row="3" column="1"><widget class="QComboBox" name="cmbMotorista"/></item>
+          <item row="4" column="0"><widget class="QLabel" name="lAux"><property name="text"><string>Auxiliar de viagem (opcional)</string></property></widget></item>
+          <item row="4" column="1"><widget class="QComboBox" name="cmbAuxiliar"/></item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="gPass">
+         <property name="title"><string>Pacientes e acompanhantes</string></property>
+         <layout class="QGridLayout" name="grid">
+          <property name="horizontalSpacing"><number>10</number></property>
+          <property name="verticalSpacing"><number>10</number></property>
+          <item row="0" column="0"><widget class="QLineEdit" name="txtCpfPaciente"><property name="placeholderText"><string>CPF do paciente</string></property></widget></item>
+          <item row="0" column="1"><widget class="QPushButton" name="btnBuscarPaciente"><property name="text"><string>🔍  Buscar paciente</string></property></widget></item>
+          <item row="0" column="2" colspan="3"><widget class="QLabel" name="lblPaciente"/></item>
+          <item row="1" column="0"><widget class="QLabel" name="lAcompanhante"><property name="text"><string>Acompanhante (opcional)</string></property></widget></item>
+          <item row="1" column="1"><widget class="QLineEdit" name="txtNomeAcompanhante"><property name="placeholderText"><string>Nome</string></property><property name="maxLength"><number>150</number></property></widget></item>
+          <item row="1" column="2"><widget class="QLineEdit" name="txtCpfAcompanhante"><property name="placeholderText"><string>CPF</string></property><property name="maxLength"><number>14</number></property></widget></item>
+          <item row="1" column="3"><widget class="QLineEdit" name="txtTelefoneAcompanhante"><property name="placeholderText"><string>Telefone com DDD</string></property><property name="maxLength"><number>15</number></property></widget></item>
+          <item row="1" column="4"><widget class="QPushButton" name="btnVerificarAcompanhante"><property name="text"><string>Verificar</string></property></widget></item>
+          <item row="2" column="1" colspan="4"><widget class="QLabel" name="lblAcompanhante"/></item>
+          <item row="3" column="0"><widget class="QPushButton" name="btnAdicionar"><property name="text"><string>➕  Adicionar à viagem</string></property></widget></item>
+          <item row="3" column="1"><widget class="QPushButton" name="btnRemover"><property name="text"><string>Remover selecionado</string></property></widget></item>
+          <item row="4" column="0" colspan="5">
+           <widget class="QTableWidget" name="tblPassageiros">
+            <property name="minimumSize"><size><width>0</width><height>140</height></size></property>
+            <property name="columnCount"><number>3</number></property>
+            <property name="rowCount"><number>0</number></property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item><widget class="QLabel" name="lblMensagem"><property name="styleSheet"><string notr="true">font-weight:700;</string></property></widget></item>
+       <item>
+        <layout class="QHBoxLayout" name="a">
+         <item><widget class="QPushButton" name="btnLimpar"><property name="text"><string>Nova viagem</string></property></widget></item>
+         <item>
+          <spacer name="spacerAcoesViagem">
+           <property name="orientation"><enum>Qt::Horizontal</enum></property>
+           <property name="sizeHint" stdset="0"><size><width>30</width><height>20</height></size></property>
+          </spacer>
+         </item>
+         <item><widget class="QPushButton" name="btnListar"><property name="text"><string>Listar na data</string></property></widget></item>
+         <item><widget class="QPushButton" name="btnSalvar"><property name="text"><string>Salvar viagem</string></property></widget></item>
+         <item><widget class="QPushButton" name="btnExcluir"><property name="text"><string>Excluir viagem</string></property></widget></item>
+         <item><widget class="QPushButton" name="btnExportarPlanilha"><property name="visible"><bool>false</bool></property><property name="text"><string>Exportar planilha</string></property></widget></item>
+         <item><widget class="QPushButton" name="btnGerarPdf"><property name="visible"><bool>false</bool></property><property name="text"><string>Gerar PDF</string></property></widget></item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="lblViagensCadastradas">
+         <property name="styleSheet"><string notr="true">color:#004082; font-weight:800; font-size:12.5px; background:transparent; padding-top:4px;</string></property>
+         <property name="text"><string>📋  Viagens cadastradas na data selecionada</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="tblViagens">
+         <property name="minimumSize"><size><width>0</width><height>160</height></size></property>
+         <property name="columnCount"><number>4</number></property>
+         <property name="rowCount"><number>0</number></property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
-   <item><widget class="QLabel" name="lblMensagem"/></item>
-   <item>
-    <layout class="QHBoxLayout" name="a">
-     <item><widget class="QPushButton" name="btnLimpar"><property name="text"><string>Nova viagem</string></property></widget></item>
-     <item><widget class="QPushButton" name="btnSalvar"><property name="text"><string>Salvar viagem</string></property></widget></item>
-     <item><widget class="QPushButton" name="btnExcluir"><property name="text"><string>Excluir viagem</string></property></widget></item>
-     <item><widget class="QPushButton" name="btnListar"><property name="text"><string>Listar na data</string></property></widget></item>
-     <item><widget class="QPushButton" name="btnExportarPlanilha"><property name="visible"><bool>false</bool></property><property name="text"><string>Exportar planilha</string></property></widget></item>
-     <item><widget class="QPushButton" name="btnGerarPdf"><property name="visible"><bool>false</bool></property><property name="text"><string>Gerar PDF</string></property></widget></item>
-    </layout>
-   </item>
-   <item><widget class="QTableWidget" name="tblViagens"><property name="columnCount"><number>4</number></property><property name="rowCount"><number>0</number></property></widget></item>
   </layout>
  </widget>
  <resources/>

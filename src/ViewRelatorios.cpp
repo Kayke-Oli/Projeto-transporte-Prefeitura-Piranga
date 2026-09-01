@@ -28,8 +28,7 @@ ViewRelatorios::ViewRelatorios(Database &db, QWidget *parent)
             {
                 const bool selecionada = viagemRelatorioSelecionada() > 0;
                 ui->btnExportarPlanilhaViagem->setEnabled(selecionada);
-                ui->btnGerarPdfViagem->setEnabled(selecionada);
-            });
+                ui->btnGerarPdfViagem->setEnabled(selecionada); });
     connect(ui->txtCpfHistorico, &QLineEdit::returnPressed, this, &ViewRelatorios::historico);
 
     prepararTela();
@@ -72,13 +71,13 @@ void ViewRelatorios::prepararTela()
 
 void ViewRelatorios::mensagem(const QString &texto)
 {
-    ui->lblMensagem->setStyleSheet("color:#0f5132;");
+    ui->lblMensagem->setStyleSheet("color:#00722A;");
     ui->lblMensagem->setText(texto);
 }
 
 void ViewRelatorios::erro(const QString &texto)
 {
-    ui->lblMensagem->setStyleSheet("color:#b42318;");
+    ui->lblMensagem->setStyleSheet("color:#C0392B;");
     ui->lblMensagem->setText(texto);
 }
 
@@ -105,7 +104,7 @@ void ViewRelatorios::carregarViagensRelatorio()
             ui->cmbDestinoRelatorio->addItem(descricao, viagem.id);
         }
         mensagem(viagens.empty() ? "Nenhuma viagem encontrada para a data selecionada."
-                                  : "Selecione o destino da viagem para exportar o relatorio.");
+                                 : "Selecione o destino da viagem para exportar o relatorio.");
     }
     catch (const pqxx::sql_error &erroBanco)
     {
@@ -243,7 +242,7 @@ void ViewRelatorios::historico()
                 linha, 3,
                 new QTableWidgetItem(item.acompanhante.has_value() ? QString::fromStdString(*item.acompanhante) : "—"));
         }
-        ui->lblMensagem->setStyleSheet("color:#0f5132;");
+        ui->lblMensagem->setStyleSheet("color:#00722A;");
         ui->lblMensagem->setText(itens.empty() ? "Nenhuma viagem encontrada para este paciente."
                                                : QString::number(itens.size()) + " viagem(ns) encontrada(s).");
     }
@@ -273,7 +272,7 @@ void ViewRelatorios::volume()
         ui->lblPacientes->setText(QString::number(resultado.totalPacientes));
         ui->lblAcompanhantes->setText(QString::number(resultado.totalAcompanhantes));
         ui->lblPessoas->setText(QString::number(resultado.totalPessoas));
-        ui->lblMensagem->setStyleSheet("color:#0f5132;");
+        ui->lblMensagem->setStyleSheet("color:#00722A;");
         ui->lblMensagem->setText("Volume calculado para o período selecionado.");
     }
     catch (const pqxx::sql_error &erroBanco)
@@ -313,7 +312,7 @@ void ViewRelatorios::mapa()
         }
 
         ui->txtMapa->setPlainText(texto.isEmpty() ? "Nenhuma viagem encontrada para esta data." : texto);
-        ui->lblMensagem->setStyleSheet("color:#0f5132;");
+        ui->lblMensagem->setStyleSheet("color:#00722A;");
         ui->lblMensagem->setText(texto.isEmpty() ? "Mapa diário sem viagens." : "Mapa diário gerado com sucesso.");
     }
     catch (const pqxx::sql_error &erroBanco)

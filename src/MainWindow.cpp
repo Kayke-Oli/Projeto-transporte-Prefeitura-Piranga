@@ -45,6 +45,7 @@ QWidget *MainWindow::construirCabecalho()
     layout->addWidget(logo, 0, Qt::AlignVCenter);
 
     auto *blocoTitulo = new QWidget(cabecalho);
+    blocoTitulo->setStyleSheet("background: transparent;");
     auto *layoutTitulo = new QVBoxLayout(blocoTitulo);
     layoutTitulo->setContentsMargins(0, 0, 0, 0);
     layoutTitulo->setSpacing(1);

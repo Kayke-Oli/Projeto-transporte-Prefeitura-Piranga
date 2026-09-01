@@ -65,7 +65,7 @@ void ViewCadastros::limpar()
 }
 void ViewCadastros::mensagem(const QString &texto, bool erro)
 {
-    ui->lblMensagem->setStyleSheet(erro ? "color:#b42318;" : "color:#0f5132;");
+    ui->lblMensagem->setStyleSheet(erro ? "color:#C0392B;" : "color:#00722A;");
     ui->lblMensagem->setText(texto);
 }
 bool ViewCadastros::validar()
