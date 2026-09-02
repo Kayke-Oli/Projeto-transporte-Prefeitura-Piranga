@@ -51,6 +51,7 @@ add_executable(sistema_prefeitura
     src/ViewCadastros.ui
     src/ViewViagens.ui
     src/ViewRelatorios.ui
+    src/ClickableCard.cpp
 )
 
 target_include_directories(sistema_prefeitura PRIVATE

@@ -1,18 +1,17 @@
 #include "ViewInicio.h"
 #include "AppTheme.h"
+#include "ClickableCard.h"
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QPushButton>
 #include <QVBoxLayout>
 
 namespace
 {
-    QPushButton *criarCartao(QWidget *pai, const QString &emoji, const QString &titulo,
-                             const QString &descricao, const QString &corTopo, const QString &corTopoHover)
+    ClickableCard *criarCartao(QWidget *pai, const QString &emoji, const QString &titulo,
+                               const QString &descricao, const QString &corTopo, const QString &corTopoHover)
     {
-        auto *botao = new QPushButton(pai);
-        botao->setCursor(Qt::PointingHandCursor);
+        auto *botao = new ClickableCard(pai);
         botao->setMinimumSize(250, 156);
 
         // O conteúdo visual do cartão vem de um layout próprio (ícone,
@@ -40,27 +39,18 @@ namespace
         layout->addStretch();
 
         botao->setStyleSheet(QString(R"(
-            QPushButton {
+            ClickableCard {
                 background: #ffffff;
                 border: 1px solid #DCE4EC;
                 border-top: 4px solid %1;
                 border-radius: 16px;
-                text-align: left;
             }
-            QPushButton:hover {
+            ClickableCard:hover {
                 border-top: 4px solid %2;
                 background: #FAFCFE;
             }
-            QPushButton:pressed {
-                background: #F1F5F9;
-            }
         )")
                                  .arg(corTopo, corTopoHover));
-
-        // Observação: já usamos QGraphicsDropShadowEffect aqui antes, mas em
-        // Windows com escala de tela (DPI) fracionária esse efeito borra o
-        // conteúdo interno do botão (texto some/vira serrilhado). A borda
-        // colorida acima já dá a sensação de profundidade sem esse risco.
 
         return botao;
     }
@@ -142,10 +132,10 @@ void ViewInicio::configurarInterface()
                           "Motoristas, veículos, acompanhantes e auxiliares de viagem.",
                           AppTheme::Verde, AppTheme::VerdeEscuro);
 
-    connect(p, &QPushButton::clicked, this, &ViewInicio::pacientesSelecionado);
-    connect(v, &QPushButton::clicked, this, &ViewInicio::viagensSelecionado);
-    connect(r, &QPushButton::clicked, this, &ViewInicio::relatoriosSelecionado);
-    connect(c, &QPushButton::clicked, this, &ViewInicio::cadastrosSelecionado);
+    connect(p, &ClickableCard::clicked, this, &ViewInicio::pacientesSelecionado);
+    connect(v, &ClickableCard::clicked, this, &ViewInicio::viagensSelecionado);
+    connect(r, &ClickableCard::clicked, this, &ViewInicio::relatoriosSelecionado);
+    connect(c, &ClickableCard::clicked, this, &ViewInicio::cadastrosSelecionado);
 
     grade->addWidget(p, 0, 0);
     grade->addWidget(v, 0, 1);

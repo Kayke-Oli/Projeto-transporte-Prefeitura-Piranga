@@ -1,5 +1,6 @@
 #include "ViewPacientesMenu.h"
 #include "AppTheme.h"
+#include "ClickableCard.h"
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -8,11 +9,10 @@
 
 namespace
 {
-        QPushButton *criarOpcao(QWidget *pai, const QString &emoji, const QString &titulo,
-                                const QString &descricao, const QString &cor, const QString &corHover)
+        ClickableCard *criarOpcao(QWidget *pai, const QString &emoji, const QString &titulo,
+                                  const QString &descricao, const QString &cor, const QString &corHover)
         {
-                auto *botao = new QPushButton(pai);
-                botao->setCursor(Qt::PointingHandCursor);
+                auto *botao = new ClickableCard(pai);
                 botao->setMinimumSize(230, 138);
 
                 auto *layout = new QVBoxLayout(botao);
@@ -38,21 +38,15 @@ namespace
                 layout->addStretch();
 
                 botao->setStyleSheet(QString(R"(
-            QPushButton {
+            ClickableCard {
                 background: #ffffff;
                 border: 1px solid #DCE4EC;
                 border-top: 4px solid %1;
                 border-radius: 14px;
-                text-align: left;
             }
-            QPushButton:hover { border-top: 4px solid %2; background: #FAFCFE; }
-            QPushButton:pressed { background: #F1F5F9; }
+            ClickableCard:hover { border-top: 4px solid %2; background: #FAFCFE; }
         )")
                                          .arg(cor, corHover));
-
-                // Sem QGraphicsDropShadowEffect de propósito: em Windows com escala
-                // de tela fracionária esse efeito borra o conteúdo interno do botão.
-                // A borda colorida acima já dá a sensação de profundidade.
 
                 return botao;
         }
@@ -104,13 +98,13 @@ void ViewPacientesMenu::configurarInterface()
         auto *btnConsultar = criarOpcao(this, QString::fromUtf8("\xF0\x9F\x94\x8D"), "Consultar cadastro",
                                         "Buscar pacientes por CPF ou nome.", AppTheme::Azul, AppTheme::AzulEscuro);
 
-        connect(btnCadastrar, &QPushButton::clicked, this, [this]
+        connect(btnCadastrar, &ClickableCard::clicked, this, [this]
                 { emit opcaoEscolhida(ModoPaciente::Cadastrar); });
-        connect(btnAtualizar, &QPushButton::clicked, this, [this]
+        connect(btnAtualizar, &ClickableCard::clicked, this, [this]
                 { emit opcaoEscolhida(ModoPaciente::Atualizar); });
-        connect(btnExcluir, &QPushButton::clicked, this, [this]
+        connect(btnExcluir, &ClickableCard::clicked, this, [this]
                 { emit opcaoEscolhida(ModoPaciente::Excluir); });
-        connect(btnConsultar, &QPushButton::clicked, this, [this]
+        connect(btnConsultar, &ClickableCard::clicked, this, [this]
                 { emit opcaoEscolhida(ModoPaciente::Consultar); });
 
         layoutOpcoes->addWidget(btnCadastrar, 0, 0);
