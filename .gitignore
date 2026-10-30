@@ -3,4 +3,6 @@
 /.build-tmp/
 /Sistema-Logistica-Prefeitura/
 /.vscode/
+/.build-atualizado/
+/.build-msys/
 *.user
