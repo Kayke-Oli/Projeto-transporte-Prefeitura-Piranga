@@ -39,19 +39,19 @@ A exclusão de uma viagem remove também seus vínculos de passageiros. Essas re
 
 A navegação parte de uma tela inicial com acesso a **Pacientes**, **Viagens**, **Relatórios** e **Cadastros**. A interface utiliza Qt Widgets, formulários do Qt Designer e componentes visuais definidos em C++.
 
-![Tela inicial do Sistema de Logística TFD](docs/screenshots/Tela inicial.png)
+![Tela inicial do Sistema de Logística TFD](<docs/screenshots/Tela inicial.png>)
 
 <details>
 <summary>Ver pacientes, viagens e relatórios</summary>
 
 ### Consulta de pacientes
-![Consulta de pacientes com dados fictícios](docs/screenshots/Tela inicial_pacientes.png)
+![Consulta de pacientes com dados fictícios](<docs/screenshots/Tela inicial_pacientes.png>)
 
 ### Planejamento de viagens
-![Viagem de demonstração com passageiros e acompanhante](docs/screenshots/Tela inicial_viagens_1.png)
+![Viagem de demonstração com passageiros e acompanhante](<docs/screenshots/Tela inicial_viagens_1.png>)
 
 ### Relatórios
-![Consultas e seleção da viagem para exportação](docs/screenshots/Tela inicial_realtorio_viagem.png)
+![Consultas e seleção da viagem para exportação](<docs/screenshots/Tela inicia_relatorio_viagem.png>)
 
 </details>
 
