@@ -1,148 +1,248 @@
 # Sistema de Logística TFD — Prefeitura de Piranga
 
-> Aplicação desktop para planejar, registrar e consultar o transporte de pacientes em Tratamento Fora de Domicílio (TFD).
+**Organização do transporte de pacientes em Tratamento Fora de Domicílio, do cadastro à emissão do relatório de viagem.**
 
-![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)
-![Qt](https://img.shields.io/badge/Qt-6%20Widgets-41CD52?logo=qt&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-libpqxx-4169E1?logo=postgresql&logoColor=white)
-![CMake](https://img.shields.io/badge/CMake-build-064F8C?logo=cmake&logoColor=white)
+![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)
+![Qt 6](https://img.shields.io/badge/Qt-6_Widgets-41CD52?logo=qt&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Banco_de_dados-4169E1?logo=postgresql&logoColor=white)
+[![Licença MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-green)](LICENSE)
 
-## Contexto
+Aplicação desktop em C++ e Qt para cadastrar pacientes, organizar viagens, vincular acompanhantes e consultar o histórico de transporte. A persistência em PostgreSQL reúne os registros de pacientes, equipe, veículos e viagens, com validações e restrições de integridade.
 
-No TFD, uma viagem mal planejada pode impedir que um paciente chegue a uma consulta, exame ou procedimento essencial. Este projeto foi desenvolvido para apoiar a logística de saúde pública, com foco em integridade dos dados, rastreabilidade e uma experiência clara para a equipe responsável.
-
-Mais do que um CRUD, é uma aplicação desktop voltada para um domínio sensível, no qual o histórico de transporte precisa ser preservado.
+[Funcionalidades](#funcionalidades) · [Interface](#interface) · [Como executar](#como-executar) · [Testes](#testes) · [Arquitetura](#arquitetura) · [Licença](#licença)
 
 ## Funcionalidades
 
-- Cadastro, consulta, atualização e exclusão protegida de pacientes.
-- Gestão de acompanhantes, motoristas e veículos.
-- Planejamento de viagens com data, destino, veículo, motorista e pacientes.
-- Vinculação opcional de um acompanhante por paciente em cada viagem.
-- Consulta, edição e exclusão confirmada de viagens.
-- Histórico de viagens por paciente.
-- Relatório de volume de passageiros por período e mapa diário de viagens.
-- Validação de CPF, telefone, placas e datas, incluindo anos bissextos.
-- Interface desktop com Qt Widgets e formulários do Qt Designer.
-
-## Arquitetura
-
-```mermaid
-flowchart LR
-    UI["Qt 6 Widgets\nViews + arquivos .ui"] -->|"DTOs e ações"| Repo["Repositories\nlibpqxx + SQL parametrizado"]
-    Repo -->|"transações"| DB[("PostgreSQL\nconstraints + chaves estrangeiras")]
-    DB -->|"pqxx::sql_error"| UI
-```
-
-### Decisões técnicas
-
-- Repositórios executam SQL parametrizado e não escondem exceções do banco.
-- A interface captura erros do PostgreSQL e os traduz em mensagens claras.
-- `ON DELETE RESTRICT` protege o histórico vinculado a pacientes, motoristas, veículos e acompanhantes.
-- A tabela associativa impede o mesmo paciente de entrar duas vezes na mesma viagem.
-- Operações de viagem usam transações para preservar consistência.
-- Entidades são DTOs puros; CPF e datas são validados por funções utilitárias sem estado.
-- Credenciais ficam em variáveis de ambiente, nunca no código-fonte.
-- A conexão com PostgreSQL exige TLS.
-
-## Stack
-
-| Camada | Tecnologia |
+| Módulo | Recursos disponíveis |
 | --- | --- |
-| Aplicação desktop | C++17 + Qt 6 Widgets |
-| Interface | Qt Designer (`.ui`) |
+| **Pacientes** | Cadastro, consulta por CPF ou nome, atualização de dados e exclusão condicionada aos vínculos existentes. |
+| **Cadastros de apoio** | Cadastro e manutenção de motoristas, veículos e auxiliares de viagem. |
+| **Viagens** | Cadastro, consulta, edição e exclusão de viagens, com data, destino, veículo, motorista e auxiliar opcional. |
+| **Passageiros e acompanhantes** | Inclusão de pacientes na viagem e associação opcional de um acompanhante por paciente. Um novo acompanhante pode ser informado durante esse fluxo, sem cadastro prévio separado. |
+| **Consultas operacionais** | Histórico por paciente, volume de passageiros por período e mapa diário de viagens em texto. |
+| **Exportação** | Lista de passageiros de uma viagem em CSV e relatório em PDF A4 na orientação paisagem. |
+
+O CSV contém nome, CPF, telefone e informações do acompanhante; utiliza UTF-8 com BOM e ponto e vírgula como separador. O PDF também apresenta os dados da viagem, do veículo e da equipe. A exportação é feita por viagem; as demais consultas são exibidas na interface.
+
+### Regras implementadas
+
+- Validação de CPF, telefone, placa e datas nos fluxos correspondentes.
+- Impedimento de inclusão repetida do mesmo paciente na mesma viagem.
+- Verificação, por gatilhos no banco, de paciente já vinculado a outra viagem na mesma data, com mensagem na interface.
+- No máximo um acompanhante associado a cada paciente em uma viagem.
+- Restrições de exclusão para cadastros referenciados por viagens.
+- Transações nas operações de gravação de viagens e passageiros.
+
+A exclusão de uma viagem remove também seus vínculos de passageiros. Essas regras de integridade não equivalem a uma trilha de auditoria imutável.
+
+## Interface
+
+A navegação parte de uma tela inicial com acesso a **Pacientes**, **Viagens**, **Relatórios** e **Cadastros**. A interface utiliza Qt Widgets, formulários do Qt Designer e componentes visuais definidos em C++.
+
+![Tela inicial do Sistema de Logística TFD](docs/screenshots/Tela inicial.png)
+
+<details>
+<summary>Ver pacientes, viagens e relatórios</summary>
+
+### Consulta de pacientes
+![Consulta de pacientes com dados fictícios](docs/screenshots/Tela inicial_pacientes.png)
+
+### Planejamento de viagens
+![Viagem de demonstração com passageiros e acompanhante](docs/screenshots/Tela inicial_viagens_1.png)
+
+### Relatórios
+![Consultas e seleção da viagem para exportação](docs/screenshots/Tela inicial_realtorio_viagem.png)
+
+</details>
+
+FIM DA GALERIA -->
+
+## Tecnologias
+
+| Finalidade | Tecnologia |
+| --- | --- |
+| Linguagem | C++17 |
+| Interface desktop | Qt 6 Widgets e Qt Designer |
 | Banco de dados | PostgreSQL |
-| Persistência | libpqxx |
-| Build e testes | CMake + CTest |
-| Segurança de transporte | TLS via PostgreSQL/libpq |
-
-## Estrutura do projeto
-
-```text
-.
-├── src/
-│   ├── *Repository.*        # Persistência e transações
-│   ├── View*.cpp/.h/.ui     # Telas Qt
-│   ├── Entidades.h          # DTOs do domínio
-│   ├── CpfUtils.h           # Validação de CPF
-│   ├── DataUtils.h          # Conversão e validação de datas
-│   ├── schema.sql           # Criação da base
-│   └── migracao_*.sql       # Migrações
-├── tests/
-│   └── CoreUtilsTests.cpp   # Testes de CPF e datas
-├── CMakeLists.txt
-└── README.md
-```
+| Acesso ao banco | libpqxx e libpq |
+| Compilação | CMake, com geração automática de código Qt |
+| Testes | CTest, com executáveis de teste em C++ |
+| Relatórios | QPdfWriter, QTextDocument e exportação CSV |
 
 ## Como executar
 
-### Pré-requisitos
+O roteiro abaixo utiliza **Windows, PowerShell e MSYS2/MinGW64**, conforme os caminhos previstos na configuração de compilação do projeto.
 
-- Qt 6 Widgets;
-- compilador com suporte a C++17;
-- CMake 3.16 ou superior;
-- PostgreSQL com TLS habilitado;
-- libpq e libpqxx.
+### 1. Pré-requisitos
 
-### Criar o banco
+- Git.
+- Compilador C++17, como o GCC do ambiente MinGW64.
+- CMake 3.16 ou superior, mínimo declarado no projeto.
+- MinGW Make, para o gerador usado nos comandos abaixo.
+- Qt 6 com o módulo Widgets.
+- Headers e bibliotecas de desenvolvimento de libpqxx e libpq.
+- Um servidor PostgreSQL acessível, com TLS habilitado, e os utilitários `createdb` e `psql`.
 
-```powershell
-createdb prefeitura_viagens
-psql -d prefeitura_viagens -f src/schema.sql
-```
+Use compilador, Qt e bibliotecas da mesma arquitetura e do mesmo ambiente. Os comandos consideram o prefixo `C:/msys64/mingw64`; ajuste-o se sua instalação for diferente. O projeto ainda não fixa versões de Qt, PostgreSQL e libpqxx em um manifesto de dependências.
 
-### Atualizar um banco existente
-
-Para preservar os dados ja cadastrados, aplique as migracoes abaixo uma unica vez:
+### 2. Obter o código
 
 ```powershell
-psql -d prefeitura_viagens -f src/migracao_auxiliares_relatorios.sql
-psql -d prefeitura_viagens -f src/migracao_acompanhantes_por_viagem.sql
-psql -d prefeitura_viagens -f src/migracao_paciente_uma_viagem_por_dia.sql
+git clone https://github.com/Kayke-Oli/Projeto-transporte-Prefeitura-Piranga.git
+cd Projeto-transporte-Prefeitura-Piranga
 ```
 
-Os novos acompanhantes sao informados ao adicionar o paciente a viagem. Nao e necessario cadastra-los previamente.
+### 3. Preparar um banco novo
 
-### Configurar a conexão
+Com o servidor em execução e os utilitários do PostgreSQL disponíveis no terminal:
 
-Defina as variáveis no mesmo terminal que executará o aplicativo:
+```powershell
+createdb -h 127.0.0.1 -p 5432 -U postgres prefeitura_viagens
+psql -h 127.0.0.1 -p 5432 -U postgres -d prefeitura_viagens -v ON_ERROR_STOP=1 -1 -f src/schema.sql
+```
+
+O arquivo `schema.sql` cria as tabelas, funções de validação, índices e gatilhos. Ele deve ser aplicado a um banco vazio; não é um script de atualização de uma instalação existente. A aplicação não cria o banco automaticamente.
+
+#### Bancos existentes
+
+Preserve os dados e faça backup antes de atualizar o esquema. Escolha as migrações de acordo com a versão da base; não execute todos os scripts indiscriminadamente nem reaplique o schema completo.
+
+| Script em `src/` | Finalidade |
+| --- | --- |
+| `migracao_pacientes.sql` | Normalização de pacientes, função de validação de CPF e restrições de integridade. |
+| `migracao_cadastros_auxiliares.sql` | Normalização e validação dos cadastros de acompanhantes, motoristas e veículos. |
+| `migracao_auxiliares_relatorios.sql` | Auxiliares de viagem e vínculo de um paciente cadastrado como acompanhante. |
+| `migracao_acompanhantes_por_viagem.sql` | Dados de acompanhante informados diretamente no vínculo da viagem. |
+| `migracao_paciente_uma_viagem_por_dia.sql` | Gatilhos de verificação de participação do paciente por data. |
+
+As migrações que utilizam `cpf_valido` pressupõem que essa função já exista. Quando ambas forem necessárias, aplique `migracao_auxiliares_relatorios.sql` antes de `migracao_acompanhantes_por_viagem.sql`, pois alteram a mesma restrição. Um banco novo criado com o schema atual já possui essas estruturas.
+
+### 4. Configurar a conexão
+
+Defina as variáveis no **mesmo terminal** em que abrirá o aplicativo:
 
 ```powershell
 $env:DB_HOST = "127.0.0.1"
 $env:DB_PORT = "5432"
 $env:DB_NAME = "prefeitura_viagens"
 $env:DB_USER = "postgres"
-$env:DB_PASSWORD = "sua-senha"
+$env:DB_PASSWORD = "SUBSTITUA_PELA_SENHA_DO_BANCO"
 $env:DB_SSLMODE = "require"
 ```
 
-Em produção, utilize `DB_SSLMODE=verify-full` e configure `DB_SSLROOTCERT` com o certificado da autoridade certificadora.
+| Variável | Padrão | Observação |
+| --- | --- | --- |
+| `DB_HOST` | `127.0.0.1` | Endereço do servidor. |
+| `DB_PORT` | `5432` | Porta numérica entre 1 e 65535. |
+| `DB_NAME` | `prefeitura_viagens` | Banco utilizado pela aplicação. |
+| `DB_USER` | `postgres` | Usuário de conexão. |
+| `DB_PASSWORD` | Sem padrão utilizável | Obrigatória e não vazia. |
+| `DB_SSLMODE` | `require` | Aceita `require`, `verify-ca` ou `verify-full`. |
+| `DB_SSLROOTCERT` | Não definido | Caminho do certificado da autoridade certificadora, obrigatório para `verify-ca` e `verify-full`. |
 
-### Compilar e executar
+Para validar a identidade do servidor, configure `verify-full`, um certificado de autoridade confiável e um `DB_HOST` compatível com o certificado. O modo `require` exige criptografia, mas não oferece a mesma verificação de identidade. O servidor precisa oferecer TLS inclusive no ambiente de desenvolvimento.
+
+O código lê variáveis do processo; não há carregamento automático de arquivo `.env`. Para uso operacional, configure um usuário de banco com as permissões necessárias ao aplicativo, em vez de compartilhar uma conta administrativa.
+
+### 5. Compilar e iniciar
 
 ```powershell
-cmake -S . -B build
+$env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+
+cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH=C:/msys64/mingw64 -DBUILD_TESTING=ON
 cmake --build build --parallel
+
 .\build\sistema_prefeitura.exe
 ```
 
-### Executar os testes
+Use uma pasta de compilação nova ao trocar de gerador ou compilador. As DLLs do Qt, libpqxx, libpq e suas dependências precisam estar acessíveis durante a execução. A janela principal só é aberta após a conexão com PostgreSQL.
+
+### 6. Primeiro uso
+
+1. Em **Cadastros**, registre o motorista, o veículo e, quando necessário, o auxiliar de viagem.
+2. Em **Pacientes**, cadastre os pacientes que serão transportados.
+3. Em **Viagens**, defina data, destino, veículo e equipe; adicione os passageiros e os acompanhantes opcionais.
+4. Salve a viagem e consulte os dados registrados.
+5. Em **Relatórios**, consulte histórico, volume por período ou mapa diário. Selecione a data e a viagem para exportar CSV ou PDF.
+
+## Testes
+
+Após compilar com `BUILD_TESTING=ON`, execute:
 
 ```powershell
-ctest --test-dir build --output-on-failure
+Push-Location build
+ctest --output-on-failure
+Pop-Location
 ```
 
-## Distribuição no Windows
+| Teste | Escopo atual |
+| --- | --- |
+| `core_utils_tests` | Normalização e validação de CPF; conversão e validação de datas, incluindo anos bissextos. |
+| `report_exporter_tests` | Exportação CSV com verificação de conteúdo e criação de um PDF não vazio a partir de dados de teste. |
 
-A pasta `Sistema-Logistica-Prefeitura` é a versão portátil do aplicativo. Ela inclui as DLLs do Qt, PostgreSQL/libpqxx e plugins necessários. Para o GitHub, mantenha essa pasta fora do controle de versão e publique-a como arquivo `.zip` em uma **GitHub Release**.
+Esses testes não precisam de uma conexão com PostgreSQL. O teste de relatórios utiliza Qt e requer suas bibliotecas e plugins disponíveis. Em um ambiente sem tela, pode-se configurar `$env:QT_QPA_PLATFORM = "offscreen"` quando o plugin estiver instalado.
 
-## Próximas evoluções
+A verificação atual de PDF não substitui a revisão visual de paginação e legibilidade. Testes de integração com o banco ainda são uma evolução proposta.
 
-- Autenticação com perfis de acesso e trilha de auditoria.
-- Exportação de relatórios em PDF.
-- Indicadores operacionais para frota e demanda.
-- Testes de integração com uma instância PostgreSQL isolada.
+## Arquitetura
 
----
+```mermaid
+flowchart LR
+    UI["Qt Widgets · MainWindow e Views"] --> R["Repositories · consultas e transações"]
+    R --> DB[(PostgreSQL)]
+    UI --> E["ReportExporter"]
+    E --> CSV["Arquivo CSV"]
+    E --> PDF["Arquivo PDF"]
+```
 
-Projeto desenvolvido para demonstrar arquitetura desktop em C++, integração segura com PostgreSQL e cuidado com dados em um contexto de saúde pública.
+- **Interface:** `MainWindow` organiza a navegação; as classes `View*` apresentam formulários, tabelas e mensagens.
+- **Persistência:** os repositórios executam consultas parametrizadas e operações transacionais via libpqxx.
+- **Conexão:** `Database.h` concentra a configuração por ambiente e a abertura/revalidação da conexão.
+- **Domínio:** `Entidades.h` define as estruturas de dados compartilhadas.
+- **Validação:** `CpfUtils.h` e `DataUtils.h` tratam CPF e datas; o schema complementa as verificações com restrições relacionais.
+- **Exportação:** `ReportExporter` recebe os dados de uma viagem e gera CSV ou PDF.
+
+### Estrutura principal
+
+```text
+.
+├── src/
+│   ├── main.cpp                   # Inicialização, tema e conexão
+│   ├── MainWindow.*               # Janela principal e navegação
+│   ├── View*                      # Telas C++ e formulários .ui
+│   ├── *Repository.*              # Persistência e consultas
+│   ├── Database.h                 # Conexão com PostgreSQL
+│   ├── Entidades.h                # Estruturas do domínio
+│   ├── CpfUtils.h / DataUtils.h   # Validações e conversões
+│   ├── Apptheme.h                 # Tema e marca incorporada
+│   ├── ClickableCard.*            # Componente de navegação
+│   ├── ReportExporter.*           # Exportação CSV e PDF
+│   ├── schema.sql                 # Estrutura inicial do banco
+│   └── migracao_*.sql             # Atualizações de bases existentes
+├── tests/
+│   ├── CoreUtilsTests.cpp
+│   └── ReportExporterTests.cpp
+├── CMakeLists.txt
+├── .gitignore
+├── LICENSE
+└── README.md
+```
+
+Pastas de compilação e relatórios gerados não fazem parte do código-fonte necessário para manter o projeto.
+
+## Solução de problemas
+
+| Situação | O que verificar |
+| --- | --- |
+| `DB_PASSWORD não foi definida` | Configure a variável no terminal que inicia o programa. |
+| Conexão recusada ou banco indisponível | Serviço PostgreSQL, endereço, porta, credenciais, nome do banco e configuração TLS. |
+| Falha de certificado | Caminho em `DB_SSLROOTCERT`, cadeia de confiança e nome do servidor no modo `verify-full`. |
+| Qt 6 ou libpqxx não encontrados | Dependências de desenvolvimento, arquitetura e prefixo informado ao CMake. |
+| DLL ou plugin Qt não encontrado | Ambiente de execução e distribuição das bibliotecas e plugins. |
+| Erro de coluna ou tabela inexistente | Compatibilidade da base com o schema e as migrações necessárias. |
+
+## Licença
+
+Distribuído sob a [licença MIT](LICENSE).
+
+Desenvolvido por **Kayke Rodrigues de Oliveira** — [@Kayke-Oli](https://github.com/Kayke-Oli).
