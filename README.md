@@ -55,7 +55,7 @@ A navegação parte de uma tela inicial com acesso a **Pacientes**, **Viagens**,
 
 </details>
 
-### Mais imagens podem ser consultadas em docs/screenshots
+### Mais imagens podem ser consultadas em ![docs/screenshots/](<docs/screencshots>)
 
 ## Tecnologias
 
@@ -214,7 +214,7 @@ flowchart LR
 │   ├── Database.h                 # Conexão com PostgreSQL
 │   ├── Entidades.h                # Estruturas do domínio
 │   ├── CpfUtils.h / DataUtils.h   # Validações e conversões
-│   ├── Apptheme.h                 # Tema e marca incorporada
+│   ├── AppTheme.h                 # Tema e marca incorporada
 │   ├── ClickableCard.*            # Componente de navegação
 │   ├── ReportExporter.*           # Exportação CSV e PDF
 │   ├── schema.sql                 # Estrutura inicial do banco
@@ -222,6 +222,9 @@ flowchart LR
 ├── tests/
 │   ├── CoreUtilsTests.cpp
 │   └── ReportExporterTests.cpp
+├── docs/
+    └── screenshots/
+        └── Tela inicial.png       # Contém todas as imagens do aplicativo
 ├── CMakeLists.txt
 ├── .gitignore
 ├── LICENSE
