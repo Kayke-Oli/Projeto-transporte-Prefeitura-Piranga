@@ -51,7 +51,7 @@ A navegação parte de uma tela inicial com acesso a **Pacientes**, **Viagens**,
 ![Viagem de demonstração com passageiros e acompanhante](<docs/screenshots/Tela inicial_viagens_1.png>)
 
 ### Relatórios
-![Consultas e seleção da viagem para exportação](<docs/screenshots/Tela inicia_relatorio_viagem.png>)
+![Consultas e seleção da viagem para exportação](<docs/screenshots/Tela inicial_relatorio_viagem.png>)
 
 </details>
 
