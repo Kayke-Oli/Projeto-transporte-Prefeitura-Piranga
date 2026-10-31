@@ -55,7 +55,7 @@ A navegação parte de uma tela inicial com acesso a **Pacientes**, **Viagens**,
 
 </details>
 
-FIM DA GALERIA -->
+### Mais imagens podem ser consultadas em docs/screenshots
 
 ## Tecnologias
 
